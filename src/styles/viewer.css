@@ -1,0 +1,147 @@
+#x-pic-enhance-root {
+  color-scheme: dark;
+  position: relative;
+  z-index: 2147483647;
+}
+
+#x-pic-enhance-root,
+#x-pic-enhance-root * {
+  box-sizing: border-box;
+}
+
+.xpe-viewer {
+  position: fixed;
+  inset: 0;
+  z-index: 2147483647;
+  background: rgba(5, 8, 12, 0.94);
+  color: #f6f8fa;
+  font-family:
+    Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+.xpe-toolbar {
+  position: fixed;
+  top: 16px;
+  left: 50%;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  max-width: calc(100vw - 24px);
+  padding: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 8px;
+  background: rgba(16, 22, 30, 0.88);
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.32);
+  transform: translateX(-50%);
+  backdrop-filter: blur(14px);
+}
+
+.xpe-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 36px;
+  height: 36px;
+  padding: 0 12px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.08);
+  color: #f6f8fa;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 650;
+  line-height: 1;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.xpe-button:hover {
+  background: rgba(255, 255, 255, 0.16);
+}
+
+.xpe-button:focus-visible {
+  outline: 2px solid #7dd3fc;
+  outline-offset: 2px;
+}
+
+.xpe-close {
+  min-width: 58px;
+}
+
+.xpe-link {
+  min-width: 52px;
+}
+
+.xpe-scale {
+  min-width: 54px;
+  padding: 0 4px;
+  color: rgba(246, 248, 250, 0.86);
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+}
+
+.xpe-canvas {
+  position: absolute;
+  inset: 0;
+  overflow: auto;
+  overscroll-behavior: contain;
+  cursor: grab;
+  user-select: none;
+}
+
+.xpe-canvas--dragging {
+  cursor: grabbing;
+}
+
+.xpe-stage {
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  min-height: 100vh;
+  padding: 80px 48px 48px;
+}
+
+.xpe-image {
+  display: block;
+  max-width: none;
+  max-height: none;
+  border-radius: 4px;
+  box-shadow: 0 20px 80px rgba(0, 0, 0, 0.48);
+  object-fit: contain;
+  transform-origin: center top;
+  will-change: transform;
+}
+
+.xpe-loading {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  color: rgba(246, 248, 250, 0.76);
+  font-size: 14px;
+  transform: translate(-50%, -50%);
+}
+
+@media (max-width: 560px) {
+  .xpe-toolbar {
+    top: 8px;
+    gap: 4px;
+    padding: 6px;
+  }
+
+  .xpe-button {
+    min-width: 34px;
+    height: 34px;
+    padding: 0 8px;
+  }
+
+  .xpe-link,
+  .xpe-close {
+    min-width: 44px;
+  }
+
+  .xpe-stage {
+    padding: 64px 24px 32px;
+  }
+}
