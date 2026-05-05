@@ -24,6 +24,14 @@ Load the generated `dist` directory from Chrome/Edge:
 3. Choose "Load unpacked".
 4. Select this project's `dist` directory.
 
+## Store package
+
+```bash
+npm run package
+```
+
+The store upload archive is generated in `release/`. Store listing copy, privacy policy text, and the release checklist are in `store/`.
+
 ## Controls
 
 - Click an X/Twitter media image to open the enhanced viewer.
