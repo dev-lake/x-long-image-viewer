@@ -1,5 +1,6 @@
 import React from "react";
 import { createRoot, type Root } from "react-dom/client";
+import { t } from "../i18n";
 import { ImageViewer } from "../viewer/ImageViewer";
 import "../styles/viewer.css";
 
@@ -114,7 +115,7 @@ function handleDocumentClick(event: MouseEvent): void {
 
   openViewer({
     imageUrl,
-    sourceAlt: image.alt || "X image"
+    sourceAlt: image.alt || t("defaultImageAlt")
   });
 }
 

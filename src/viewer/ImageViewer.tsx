@@ -1,4 +1,12 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { t } from "../i18n";
+import {
+  deferRatingPrompt,
+  declineRatingPrompt,
+  markRatingPromptAccepted,
+  recordViewerOpenAndGetRatingPrompt,
+  type RatingPromptState
+} from "../ratingPrompt";
 
 type ImageViewerProps = {
   imageUrl: string;
@@ -38,6 +46,7 @@ export function ImageViewer({ imageUrl, sourceAlt, onClose }: ImageViewerProps) 
   const [translate, setTranslate] = useState<Point>({ x: 0, y: 0 });
   const [isDragging, setIsDragging] = useState(false);
   const [hasLoaded, setHasLoaded] = useState(false);
+  const [ratingPrompt, setRatingPrompt] = useState<RatingPromptState | null>(null);
 
   const isLongImage = naturalSize.width > 0 && naturalSize.height / naturalSize.width >= LONG_IMAGE_RATIO;
 
@@ -115,6 +124,20 @@ export function ImageViewer({ imageUrl, sourceAlt, onClose }: ImageViewerProps) 
       resetView();
     }
   }, [hasLoaded, resetView]);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    recordViewerOpenAndGetRatingPrompt().then((nextRatingPrompt) => {
+      if (isMounted && nextRatingPrompt.shouldShow) {
+        setRatingPrompt(nextRatingPrompt);
+      }
+    });
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   useEffect(() => {
     const viewport = viewportRef.current;
@@ -252,6 +275,26 @@ export function ImageViewer({ imageUrl, sourceAlt, onClose }: ImageViewerProps) 
     zoomAt(nextScale, { x: event.clientX, y: event.clientY });
   };
 
+  const handleRateClick = () => {
+    if (!ratingPrompt?.storeUrl) {
+      return;
+    }
+
+    window.open(ratingPrompt.storeUrl, "_blank", "noopener,noreferrer");
+    setRatingPrompt(null);
+    void markRatingPromptAccepted();
+  };
+
+  const handleRemindLaterClick = () => {
+    setRatingPrompt(null);
+    void deferRatingPrompt();
+  };
+
+  const handleNoThanksClick = () => {
+    setRatingPrompt(null);
+    void declineRatingPrompt();
+  };
+
   const imageStyle = {
     width: renderedSize.width ? `${renderedSize.width}px` : "auto",
     height: renderedSize.height ? `${renderedSize.height}px` : "auto",
@@ -259,27 +302,47 @@ export function ImageViewer({ imageUrl, sourceAlt, onClose }: ImageViewerProps) 
   };
 
   return (
-    <div className="xpe-viewer" role="dialog" aria-modal="true" aria-label="Enhanced X image viewer">
+    <div className="xpe-viewer" role="dialog" aria-modal="true" aria-label={t("dialogLabel")}>
       <div className="xpe-toolbar" onClick={(event) => event.stopPropagation()}>
-        <button type="button" className="xpe-button" onClick={() => zoomBy(1 / SCALE_STEP)} title="Zoom out">
+        <button type="button" className="xpe-button" onClick={() => zoomBy(1 / SCALE_STEP)} title={t("zoomOut")}>
           -
         </button>
-        <span className="xpe-scale" aria-label="Current zoom">
+        <span className="xpe-scale" aria-label={t("currentZoom")}>
           {formatScale(scale)}
         </span>
-        <button type="button" className="xpe-button" onClick={() => zoomBy(SCALE_STEP)} title="Zoom in">
+        <button type="button" className="xpe-button" onClick={() => zoomBy(SCALE_STEP)} title={t("zoomIn")}>
           +
         </button>
-        <button type="button" className="xpe-button" onClick={resetView} title="Reset view">
+        <button type="button" className="xpe-button" onClick={resetView} title={t("resetView")}>
           0
         </button>
-        <a className="xpe-button xpe-link" href={imageUrl} target="_blank" rel="noreferrer" title="Open original image">
-          Open
+        <a className="xpe-button xpe-link" href={imageUrl} target="_blank" rel="noreferrer" title={t("openOriginal")}>
+          {t("openOriginal")}
         </a>
-        <button type="button" className="xpe-button xpe-close" onClick={onClose} title="Close">
-          Close
+        <button type="button" className="xpe-button xpe-close" onClick={onClose} title={t("close")}>
+          {t("close")}
         </button>
       </div>
+
+      {ratingPrompt?.shouldShow && (
+        <div className="xpe-rating" role="status" onClick={(event) => event.stopPropagation()}>
+          <div className="xpe-rating__copy">
+            <strong>{t("rateTitle")}</strong>
+            <span>{t("ratePrompt")}</span>
+          </div>
+          <div className="xpe-rating__actions">
+            <button type="button" className="xpe-button xpe-rating__primary" onClick={handleRateClick}>
+              {t("rate")}
+            </button>
+            <button type="button" className="xpe-button" onClick={handleRemindLaterClick}>
+              {t("remindLater")}
+            </button>
+            <button type="button" className="xpe-button" onClick={handleNoThanksClick}>
+              {t("noThanks")}
+            </button>
+          </div>
+        </div>
+      )}
 
       <div
         ref={viewportRef}
@@ -296,7 +359,7 @@ export function ImageViewer({ imageUrl, sourceAlt, onClose }: ImageViewerProps) 
           style={{ minWidth: `${Math.max(renderedSize.width + 96, viewportSize.width)}px` }}
           onClick={handleSurfaceClick}
         >
-          {!hasLoaded && <div className="xpe-loading">Loading image...</div>}
+          {!hasLoaded && <div className="xpe-loading">{t("loadingImage")}</div>}
           <img
             ref={imageRef}
             className="xpe-image"
