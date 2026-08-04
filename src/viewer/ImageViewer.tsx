@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { preloadImage } from "../imageLoader";
 import { t } from "../i18n";
 import {
   deferRatingPrompt,
@@ -7,11 +8,18 @@ import {
   recordViewerOpenAndGetRatingPrompt,
   type RatingPromptState
 } from "../ratingPrompt";
+import { readToolbarPosition, writeToolbarPosition, type ToolbarPosition } from "../toolbarPreference";
 
 type ImageViewerProps = {
-  imageUrl: string;
-  sourceAlt: string;
+  images: ViewerImage[];
+  initialIndex: number;
   onClose: () => void;
+};
+
+type ViewerImage = {
+  url: string;
+  previewUrl: string;
+  alt: string;
 };
 
 type Point = {
@@ -20,9 +28,9 @@ type Point = {
 };
 
 const MIN_SCALE = 0.2;
+const MIN_FIT_SCALE = 0.01;
 const MAX_SCALE = 6;
 const SCALE_STEP = 1.2;
-const LONG_IMAGE_RATIO = 1.8;
 
 function clamp(value: number, min: number, max: number): number {
   return Math.min(Math.max(value, min), max);
@@ -32,13 +40,83 @@ function formatScale(scale: number): string {
   return `${Math.round(scale * 100)}%`;
 }
 
-export function ImageViewer({ imageUrl, sourceAlt, onClose }: ImageViewerProps) {
+function calculateFitScale(imageWidth: number, imageHeight: number, viewportWidth: number, viewportHeight: number): number {
+  const isNarrowViewport = viewportWidth <= 560;
+  const horizontalPadding = isNarrowViewport ? 48 : 96;
+  const verticalPadding = isNarrowViewport ? 128 : 160;
+  const widthScale = (viewportWidth - horizontalPadding) / imageWidth;
+  const heightScale = (viewportHeight - verticalPadding) / imageHeight;
+
+  return clamp(Math.min(widthScale, heightScale), MIN_FIT_SCALE, 1);
+}
+
+function OpenIcon() {
+  return (
+    <svg className="xpe-icon" viewBox="0 0 24 24" aria-hidden="true">
+      <path d="M14 5h5v5" />
+      <path d="M10 14 19 5" />
+      <path d="M19 14v4a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1h4" />
+    </svg>
+  );
+}
+
+function CloseIcon() {
+  return (
+    <svg className="xpe-icon" viewBox="0 0 24 24" aria-hidden="true">
+      <path d="M18 6 6 18" />
+      <path d="m6 6 12 12" />
+    </svg>
+  );
+}
+
+function PreviousIcon() {
+  return (
+    <svg className="xpe-icon" viewBox="0 0 24 24" aria-hidden="true">
+      <path d="m15 18-6-6 6-6" />
+    </svg>
+  );
+}
+
+function NextIcon() {
+  return (
+    <svg className="xpe-icon" viewBox="0 0 24 24" aria-hidden="true">
+      <path d="m9 18 6-6-6-6" />
+    </svg>
+  );
+}
+
+function ToolbarPositionIcon({ position }: { position: ToolbarPosition }) {
+  const isAtTop = position === "top";
+
+  return (
+    <svg className="xpe-icon" viewBox="0 0 24 24" aria-hidden="true">
+      <rect x="4" y="4" width="16" height="16" rx="2" />
+      <path d={isAtTop ? "M4 9h16" : "M4 15h16"} />
+      <path d={isAtTop ? "m9 14 3 3 3-3M12 11v6" : "m9 10 3-3 3 3M12 7v6"} />
+    </svg>
+  );
+}
+
+function ResetIcon() {
+  return (
+    <svg className="xpe-icon" viewBox="0 0 24 24" aria-hidden="true">
+      <path d="M8 4H5a1 1 0 0 0-1 1v3" />
+      <path d="M16 4h3a1 1 0 0 1 1 1v3" />
+      <path d="M20 16v3a1 1 0 0 1-1 1h-3" />
+      <path d="M8 20H5a1 1 0 0 1-1-1v-3" />
+      <path d="M10 10h4v4h-4z" />
+    </svg>
+  );
+}
+
+export function ImageViewer({ images, initialIndex, onClose }: ImageViewerProps) {
   const viewportRef = useRef<HTMLDivElement | null>(null);
-  const imageRef = useRef<HTMLImageElement | null>(null);
   const dragStartRef = useRef<Point | null>(null);
   const didDragRef = useRef(false);
   const suppressNextClickRef = useRef(false);
   const translateStartRef = useRef<Point>({ x: 0, y: 0 });
+  const hasLoadedRef = useRef(false);
+  const naturalSizeRef = useRef({ width: 0, height: 0 });
 
   const [naturalSize, setNaturalSize] = useState({ width: 0, height: 0 });
   const [viewportSize, setViewportSize] = useState({ width: window.innerWidth, height: window.innerHeight });
@@ -47,21 +125,25 @@ export function ImageViewer({ imageUrl, sourceAlt, onClose }: ImageViewerProps) 
   const [isDragging, setIsDragging] = useState(false);
   const [hasLoaded, setHasLoaded] = useState(false);
   const [ratingPrompt, setRatingPrompt] = useState<RatingPromptState | null>(null);
+  const [toolbarPosition, setToolbarPosition] = useState<ToolbarPosition>("bottom");
+  const [currentIndex, setCurrentIndex] = useState(() => clamp(initialIndex, 0, Math.max(images.length - 1, 0)));
+  const [imageSource, setImageSource] = useState(() => ({
+    imageUrl: images[currentIndex]?.url ?? "",
+    src: images[currentIndex]?.previewUrl || images[currentIndex]?.url || ""
+  }));
 
-  const isLongImage = naturalSize.width > 0 && naturalSize.height / naturalSize.width >= LONG_IMAGE_RATIO;
+  const currentImage = images[currentIndex] ?? images[0];
+  const hasMultipleImages = images.length > 1;
+  const displayedSrc =
+    imageSource.imageUrl === currentImage?.url ? imageSource.src : currentImage?.previewUrl || currentImage?.url || "";
 
   const fitScale = useMemo(() => {
     if (!naturalSize.width || !naturalSize.height) {
       return 1;
     }
 
-    const horizontalPadding = 48;
-    const verticalPadding = 112;
-    const widthScale = Math.max((viewportSize.width - horizontalPadding) / naturalSize.width, MIN_SCALE);
-    const heightScale = Math.max((viewportSize.height - verticalPadding) / naturalSize.height, MIN_SCALE);
-
-    return clamp(isLongImage ? widthScale : Math.min(widthScale, heightScale), MIN_SCALE, 1);
-  }, [isLongImage, naturalSize.height, naturalSize.width, viewportSize.height, viewportSize.width]);
+    return calculateFitScale(naturalSize.width, naturalSize.height, viewportSize.width, viewportSize.height);
+  }, [naturalSize.height, naturalSize.width, viewportSize.height, viewportSize.width]);
 
   const renderedSize = useMemo(
     () => ({
@@ -71,11 +153,51 @@ export function ImageViewer({ imageUrl, sourceAlt, onClose }: ImageViewerProps) 
     [naturalSize.height, naturalSize.width, scale]
   );
 
+  const centerViewport = useCallback(() => {
+    const viewport = viewportRef.current;
+    if (!viewport) {
+      return;
+    }
+
+    viewport.scrollTo({
+      left: Math.max((viewport.scrollWidth - viewport.clientWidth) / 2, 0),
+      top: Math.max((viewport.scrollHeight - viewport.clientHeight) / 2, 0)
+    });
+  }, []);
+
   const resetView = useCallback(() => {
     setScale(fitScale);
     setTranslate({ x: 0, y: 0 });
+    requestAnimationFrame(centerViewport);
+  }, [centerViewport, fitScale]);
+
+  const resetImageState = useCallback(() => {
+    dragStartRef.current = null;
+    didDragRef.current = false;
+    suppressNextClickRef.current = false;
+    translateStartRef.current = { x: 0, y: 0 };
+    hasLoadedRef.current = false;
+    naturalSizeRef.current = { width: 0, height: 0 };
+    setNaturalSize({ width: 0, height: 0 });
+    setScale(1);
+    setTranslate({ x: 0, y: 0 });
+    setIsDragging(false);
+    setHasLoaded(false);
     viewportRef.current?.scrollTo({ top: 0, left: 0 });
-  }, [fitScale]);
+  }, []);
+
+  const showImageAt = useCallback(
+    (nextIndex: number) => {
+      const clampedIndex = clamp(nextIndex, 0, images.length - 1);
+      if (clampedIndex === currentIndex) {
+        return;
+      }
+
+      resetImageState();
+      setCurrentIndex(clampedIndex);
+    },
+    [currentIndex, images.length, resetImageState]
+  );
 
   const zoomAt = useCallback((nextScale: number, origin?: Point) => {
     setScale((currentScale) => {
@@ -110,20 +232,93 @@ export function ImageViewer({ imageUrl, sourceAlt, onClose }: ImageViewerProps) 
     [scale, zoomAt]
   );
 
+  const zoomToActualSize = useCallback(() => {
+    const rect = viewportRef.current?.getBoundingClientRect();
+    const origin = rect ? { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 } : undefined;
+    zoomAt(1, origin);
+  }, [zoomAt]);
+
   useEffect(() => {
     const handleResize = () => {
-      setViewportSize({ width: window.innerWidth, height: window.innerHeight });
+      const nextViewportSize = { width: window.innerWidth, height: window.innerHeight };
+      setViewportSize(nextViewportSize);
+
+      if (hasLoadedRef.current && naturalSizeRef.current.width && naturalSizeRef.current.height) {
+        setScale(
+          calculateFitScale(
+            naturalSizeRef.current.width,
+            naturalSizeRef.current.height,
+            nextViewportSize.width,
+            nextViewportSize.height
+          )
+        );
+        setTranslate({ x: 0, y: 0 });
+        requestAnimationFrame(centerViewport);
+      }
     };
 
     window.addEventListener("resize", handleResize);
     return () => window.removeEventListener("resize", handleResize);
-  }, []);
+  }, [centerViewport]);
+
+  useLayoutEffect(() => {
+    if (hasLoaded) {
+      centerViewport();
+    }
+  }, [centerViewport, hasLoaded]);
 
   useEffect(() => {
-    if (hasLoaded) {
-      resetView();
+    setCurrentIndex((index) => clamp(index, 0, Math.max(images.length - 1, 0)));
+  }, [images.length]);
+
+  useEffect(() => {
+    if (!currentImage) {
+      return;
     }
-  }, [hasLoaded, resetView]);
+
+    let isActive = true;
+    let idleCallbackId: number | undefined;
+    let timeoutId: number | undefined;
+    const previewUrl = currentImage.previewUrl || currentImage.url;
+
+    setImageSource({ imageUrl: currentImage.url, src: previewUrl });
+
+    void preloadImage(currentImage.url, "high")
+      .then(() => {
+        if (!isActive) {
+          return;
+        }
+
+        setImageSource({ imageUrl: currentImage.url, src: currentImage.url });
+
+        const preloadAdjacentImages = () => {
+          [images[currentIndex - 1], images[currentIndex + 1]].forEach((image) => {
+            if (image) {
+              void preloadImage(image.url, "low").catch(() => undefined);
+            }
+          });
+        };
+
+        if ("requestIdleCallback" in window) {
+          idleCallbackId = window.requestIdleCallback(preloadAdjacentImages, { timeout: 1500 });
+        } else {
+          timeoutId = globalThis.setTimeout(preloadAdjacentImages, 250);
+        }
+      })
+      .catch(() => {
+        // Keep the cached preview visible if the original request fails.
+      });
+
+    return () => {
+      isActive = false;
+      if (idleCallbackId !== undefined) {
+        window.cancelIdleCallback(idleCallbackId);
+      }
+      if (timeoutId !== undefined) {
+        globalThis.clearTimeout(timeoutId);
+      }
+    };
+  }, [currentImage, currentIndex, images]);
 
   useEffect(() => {
     let isMounted = true;
@@ -131,6 +326,20 @@ export function ImageViewer({ imageUrl, sourceAlt, onClose }: ImageViewerProps) 
     recordViewerOpenAndGetRatingPrompt().then((nextRatingPrompt) => {
       if (isMounted && nextRatingPrompt.shouldShow) {
         setRatingPrompt(nextRatingPrompt);
+      }
+    });
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    void readToolbarPosition().then((position) => {
+      if (isMounted) {
+        setToolbarPosition(position);
       }
     });
 
@@ -199,16 +408,23 @@ export function ImageViewer({ imageUrl, sourceAlt, onClose }: ImageViewerProps) 
     return () => window.removeEventListener("keydown", handleKeyDown, true);
   }, [onClose, resetView, zoomBy]);
 
-  const handleImageLoad = () => {
-    const image = imageRef.current;
-    if (!image) {
+  const handleImageLoad = (event: React.SyntheticEvent<HTMLImageElement>) => {
+    const image = event.currentTarget;
+    const nextNaturalSize = { width: image.naturalWidth, height: image.naturalHeight };
+
+    if (hasLoadedRef.current && naturalSizeRef.current.width > 0) {
+      const sizeRatio = naturalSizeRef.current.width / nextNaturalSize.width;
+      naturalSizeRef.current = nextNaturalSize;
+      setNaturalSize(nextNaturalSize);
+      setScale((currentScale) => currentScale * sizeRatio);
       return;
     }
 
-    setNaturalSize({
-      width: image.naturalWidth,
-      height: image.naturalHeight
-    });
+    naturalSizeRef.current = nextNaturalSize;
+    hasLoadedRef.current = true;
+    setNaturalSize(nextNaturalSize);
+    setScale(calculateFitScale(nextNaturalSize.width, nextNaturalSize.height, viewportSize.width, viewportSize.height));
+    setTranslate({ x: 0, y: 0 });
     setHasLoaded(true);
   };
 
@@ -295,6 +511,16 @@ export function ImageViewer({ imageUrl, sourceAlt, onClose }: ImageViewerProps) 
     void declineRatingPrompt();
   };
 
+  const handleToolbarPositionClick = () => {
+    const nextPosition: ToolbarPosition = toolbarPosition === "bottom" ? "top" : "bottom";
+    setToolbarPosition(nextPosition);
+    void writeToolbarPosition(nextPosition);
+  };
+
+  if (!currentImage) {
+    return null;
+  }
+
   const imageStyle = {
     width: renderedSize.width ? `${renderedSize.width}px` : "auto",
     height: renderedSize.height ? `${renderedSize.height}px` : "auto",
@@ -303,25 +529,92 @@ export function ImageViewer({ imageUrl, sourceAlt, onClose }: ImageViewerProps) 
 
   return (
     <div className="xpe-viewer" role="dialog" aria-modal="true" aria-label={t("dialogLabel")}>
-      <div className="xpe-toolbar" onClick={(event) => event.stopPropagation()}>
-        <button type="button" className="xpe-button" onClick={() => zoomBy(1 / SCALE_STEP)} title={t("zoomOut")}>
-          -
-        </button>
-        <span className="xpe-scale" aria-label={t("currentZoom")}>
-          {formatScale(scale)}
-        </span>
-        <button type="button" className="xpe-button" onClick={() => zoomBy(SCALE_STEP)} title={t("zoomIn")}>
-          +
-        </button>
-        <button type="button" className="xpe-button" onClick={resetView} title={t("resetView")}>
-          0
-        </button>
-        <a className="xpe-button xpe-link" href={imageUrl} target="_blank" rel="noreferrer" title={t("openOriginal")}>
-          {t("openOriginal")}
-        </a>
-        <button type="button" className="xpe-button xpe-close" onClick={onClose} title={t("close")}>
-          {t("close")}
-        </button>
+      <div
+        className={`xpe-toolbar xpe-toolbar--${toolbarPosition}`}
+        onClick={(event) => event.stopPropagation()}
+      >
+        <div className="xpe-toolbar-controls">
+          <div className="xpe-toolbar-group">
+            <button type="button" className="xpe-button" onClick={() => zoomBy(1 / SCALE_STEP)} title={t("zoomOut")}>
+              -
+            </button>
+            <span className="xpe-scale" aria-label={t("currentZoom")}>
+              {formatScale(scale)}
+            </span>
+            <button type="button" className="xpe-button" onClick={() => zoomBy(SCALE_STEP)} title={t("zoomIn")}>
+              +
+            </button>
+            <button type="button" className="xpe-button" onClick={zoomToActualSize} title={t("actualSize")}>
+              100%
+            </button>
+            <button
+              type="button"
+              className="xpe-button xpe-icon-button"
+              onClick={resetView}
+              title={t("resetView")}
+              aria-label={t("resetView")}
+            >
+              <ResetIcon />
+            </button>
+          </div>
+          {hasMultipleImages && (
+            <div className="xpe-toolbar-group xpe-gallery-controls" aria-label={t("imagePosition")}>
+              <button
+                type="button"
+                className="xpe-button xpe-gallery-button"
+                onClick={() => showImageAt(currentIndex - 1)}
+                title={t("previousImage")}
+                aria-label={t("previousImage")}
+                disabled={currentIndex === 0}
+              >
+                &lt;
+              </button>
+              <span className="xpe-image-position" aria-label={`${t("imagePosition")} ${currentIndex + 1} / ${images.length}`}>
+                {currentIndex + 1} / {images.length}
+              </span>
+              <button
+                type="button"
+                className="xpe-button xpe-gallery-button"
+                onClick={() => showImageAt(currentIndex + 1)}
+                title={t("nextImage")}
+                aria-label={t("nextImage")}
+                disabled={currentIndex === images.length - 1}
+              >
+                &gt;
+              </button>
+            </div>
+          )}
+        </div>
+        <div className="xpe-toolbar-group">
+          <button
+            type="button"
+            className="xpe-button xpe-icon-button"
+            onClick={handleToolbarPositionClick}
+            title={toolbarPosition === "bottom" ? t("moveToolbarToTop") : t("moveToolbarToBottom")}
+            aria-label={toolbarPosition === "bottom" ? t("moveToolbarToTop") : t("moveToolbarToBottom")}
+          >
+            <ToolbarPositionIcon position={toolbarPosition} />
+          </button>
+          <a
+            className="xpe-button xpe-icon-button xpe-link"
+            href={currentImage.url}
+            target="_blank"
+            rel="noreferrer"
+            title={t("openOriginal")}
+            aria-label={t("openOriginal")}
+          >
+            <OpenIcon />
+          </a>
+          <button
+            type="button"
+            className="xpe-button xpe-icon-button xpe-close"
+            onClick={onClose}
+            title={t("close")}
+            aria-label={t("close")}
+          >
+            <CloseIcon />
+          </button>
+        </div>
       </div>
 
       {ratingPrompt?.shouldShow && (
@@ -344,6 +637,31 @@ export function ImageViewer({ imageUrl, sourceAlt, onClose }: ImageViewerProps) 
         </div>
       )}
 
+      {hasMultipleImages && (
+        <div className="xpe-side-navigation" aria-label={t("imagePosition")}>
+          <button
+            type="button"
+            className="xpe-side-navigation__button xpe-side-navigation__button--previous"
+            onClick={() => showImageAt(currentIndex - 1)}
+            title={t("previousImage")}
+            aria-label={t("previousImage")}
+            disabled={currentIndex === 0}
+          >
+            <PreviousIcon />
+          </button>
+          <button
+            type="button"
+            className="xpe-side-navigation__button xpe-side-navigation__button--next"
+            onClick={() => showImageAt(currentIndex + 1)}
+            title={t("nextImage")}
+            aria-label={t("nextImage")}
+            disabled={currentIndex === images.length - 1}
+          >
+            <NextIcon />
+          </button>
+        </div>
+      )}
+
       <div
         ref={viewportRef}
         className={`xpe-canvas${isDragging ? " xpe-canvas--dragging" : ""}`}
@@ -356,16 +674,18 @@ export function ImageViewer({ imageUrl, sourceAlt, onClose }: ImageViewerProps) 
       >
         <div
           className="xpe-stage"
-          style={{ minWidth: `${Math.max(renderedSize.width + 96, viewportSize.width)}px` }}
+          style={{ minWidth: `${Math.max(renderedSize.width + (viewportSize.width <= 560 ? 48 : 96), viewportSize.width)}px` }}
           onClick={handleSurfaceClick}
         >
           {!hasLoaded && <div className="xpe-loading">{t("loadingImage")}</div>}
           <img
-            ref={imageRef}
-            className="xpe-image"
-            src={imageUrl}
-            alt={sourceAlt}
+            key={currentImage.url}
+            className={`xpe-image${hasLoaded ? " xpe-image--loaded" : ""}`}
+            src={displayedSrc}
+            alt={currentImage.alt}
             draggable={false}
+            decoding="async"
+            fetchPriority="high"
             style={imageStyle}
             onLoad={handleImageLoad}
             onClick={(event) => event.stopPropagation()}

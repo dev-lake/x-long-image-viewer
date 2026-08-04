@@ -1,6 +1,13 @@
 # X Long Image Viewer
 
-A Chrome/Edge Manifest V3 extension for viewing long images on X/Twitter with full-page scrolling, zoom, and drag-to-pan controls.
+A Chrome/Edge Manifest V3 extension for viewing X/Twitter images in a focused viewer with automatic viewport fitting, gallery navigation, zoom, and drag-to-pan controls.
+
+## What's new in 1.1.0
+
+- Images appear sooner by showing X's cached preview immediately, then switching to the asynchronously decoded original image when it is ready.
+- Neighboring originals are prefetched at low priority for faster multi-image navigation.
+- Wide windows show previous and next controls at the left and right edges of the viewer.
+- The toolbar can be placed at the top or bottom, and the selected position is remembered locally.
 
 ## Development
 
@@ -27,6 +34,8 @@ npm run build
 - `_locales/` for Chrome extension localization
 - `icons/`
 
+Only `package.json` needs to be edited for version changes. During build, `dist/manifest.json` is generated with the `package.json` version; `public/manifest.json` keeps a template version.
+
 Load the generated `dist` directory from Chrome/Edge:
 
 1. Open `chrome://extensions` or `edge://extensions`.
@@ -51,7 +60,7 @@ For a URL like `https://chromewebstore.google.com/detail/x-long-image-viewer/abc
 npm run package
 ```
 
-`npm run package` runs a fresh production build, removes the source map from the upload bundle, validates required files, and writes the store upload archive to `release/`.
+`npm run package` runs a fresh production build, removes the source map from the upload bundle, validates required files and locales, checks the rating prompt store ID configuration, and writes the store upload archive to `release/`.
 
 When creating a store package with the rating prompt enabled, pass the same environment variable:
 
@@ -61,12 +70,27 @@ VITE_CHROME_WEB_STORE_EXTENSION_ID=abcdefghijklmnopabcdefghijklmnop npm run pack
 
 Store listing copy, privacy policy text, and the release checklist are in `store/`.
 
+## Versioning
+
+Update only `package.json`:
+
+```json
+"version": "1.1.0"
+```
+
+Then run `npm run build` or `npm run package`. The build script writes that version into `dist/manifest.json`, and the package script verifies the generated manifest version matches `package.json`.
+
 ## Controls
 
 - Click an X/Twitter media image to open the enhanced viewer.
+- Images automatically fit and center within the available viewport when opened.
+- Use the previous and next buttons to browse every image in a multi-image post.
+- On windows at least 900px wide, use the previous and next buttons at the left and right edges of the viewer.
+- Use the toolbar position button to move the toolbar to the top or bottom; the choice is saved for future viewer sessions.
 - Mouse wheel scrolls the viewer.
 - Drag pans the image.
 - Double-click toggles between fitted and enlarged view.
+- Open the original image in a new tab from the toolbar.
 - `Esc` closes the viewer.
 - `+`, `-`, and `0` zoom or reset.
 - Arrow keys nudge the image position.

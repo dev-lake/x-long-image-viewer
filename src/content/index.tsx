@@ -1,5 +1,6 @@
 import React from "react";
 import { createRoot, type Root } from "react-dom/client";
+import { preloadImage } from "../imageLoader";
 import { t } from "../i18n";
 import { ImageViewer } from "../viewer/ImageViewer";
 import "../styles/viewer.css";
@@ -9,8 +10,14 @@ const TWITTER_MEDIA_PATH = "/media/";
 const ROOT_ID = "x-pic-enhance-root";
 
 type ViewerState = {
-  imageUrl: string;
-  sourceAlt: string;
+  images: ViewerImage[];
+  initialIndex: number;
+};
+
+type ViewerImage = {
+  url: string;
+  previewUrl: string;
+  alt: string;
 };
 
 let root: Root | null = null;
@@ -74,6 +81,44 @@ function findMediaImage(target: EventTarget | null): HTMLImageElement | null {
   return null;
 }
 
+function findTweetContainer(image: HTMLImageElement): Element | null {
+  return image.closest('article[data-testid="tweet"]') ?? image.closest("article");
+}
+
+function collectTweetImages(clickedImage: HTMLImageElement): ViewerImage[] {
+  const tweetContainer = findTweetContainer(clickedImage);
+  if (!tweetContainer) {
+    return [];
+  }
+
+  const seenUrls = new Set<string>();
+  const images: ViewerImage[] = [];
+
+  tweetContainer.querySelectorAll("img").forEach((image) => {
+    if (!(image instanceof HTMLImageElement)) {
+      return;
+    }
+
+    if (image.closest("article") !== tweetContainer) {
+      return;
+    }
+
+    const imageUrl = normalizeMediaUrl(image.currentSrc || image.src || "");
+    if (!imageUrl || seenUrls.has(imageUrl)) {
+      return;
+    }
+
+    seenUrls.add(imageUrl);
+    images.push({
+      url: imageUrl,
+      previewUrl: image.currentSrc || image.src || imageUrl,
+      alt: image.alt || t("defaultImageAlt")
+    });
+  });
+
+  return images;
+}
+
 function closeViewer(): void {
   root?.unmount();
   root = null;
@@ -94,11 +139,15 @@ function openViewer(state: ViewerState): void {
 
   mountNode = getMountNode();
   root = createRoot(mountNode);
-  root.render(<ImageViewer imageUrl={state.imageUrl} sourceAlt={state.sourceAlt} onClose={closeViewer} />);
+  root.render(<ImageViewer images={state.images} initialIndex={state.initialIndex} onClose={closeViewer} />);
 }
 
 function handleDocumentClick(event: MouseEvent): void {
   if (event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) {
+    return;
+  }
+
+  if (event.target instanceof Element && event.target.closest(`#${ROOT_ID}`)) {
     return;
   }
 
@@ -113,9 +162,23 @@ function handleDocumentClick(event: MouseEvent): void {
   event.stopPropagation();
   event.stopImmediatePropagation();
 
+  // Start the original request before React mounts; the already-rendered X image
+  // remains available as an instant preview while this request completes.
+  void preloadImage(imageUrl, "high").catch(() => undefined);
+
+  const tweetImages = collectTweetImages(image);
+  const images =
+    tweetImages.length > 0
+      ? tweetImages
+      : [{ url: imageUrl, previewUrl: image.currentSrc || image.src || imageUrl, alt: image.alt || t("defaultImageAlt") }];
+  const initialIndex = Math.max(
+    0,
+    images.findIndex((tweetImage) => tweetImage.url === imageUrl)
+  );
+
   openViewer({
-    imageUrl,
-    sourceAlt: image.alt || t("defaultImageAlt")
+    images,
+    initialIndex
   });
 }
 
