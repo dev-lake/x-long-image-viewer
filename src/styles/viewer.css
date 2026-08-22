@@ -1,7 +1,9 @@
 #x-pic-enhance-root {
   color-scheme: dark;
-  position: relative;
+  position: fixed;
+  inset: 0;
   z-index: 2147483647;
+  overflow: hidden;
 }
 
 #x-pic-enhance-root,
@@ -13,6 +15,7 @@
   position: fixed;
   inset: 0;
   z-index: 2147483647;
+  overflow: hidden;
   background: rgba(5, 8, 12, 0.94);
   color: #f6f8fa;
   font-family:
@@ -268,7 +271,8 @@
 .xpe-canvas {
   position: absolute;
   inset: 0;
-  overflow: auto;
+  overflow-x: hidden;
+  overflow-y: auto;
   overscroll-behavior: contain;
   cursor: grab;
   user-select: none;
@@ -278,12 +282,17 @@
   cursor: grabbing;
 }
 
+.xpe-canvas::-webkit-scrollbar:horizontal {
+  display: none;
+  height: 0;
+}
+
 .xpe-stage {
   display: flex;
   justify-content: center;
   align-items: center;
   min-height: 100vh;
-  padding: 80px 48px;
+  padding: 80px 0;
 }
 
 .xpe-image {
@@ -295,8 +304,17 @@
   box-shadow: 0 20px 80px rgba(0, 0, 0, 0.48);
   object-fit: contain;
   transform-origin: center center;
+  transition:
+    opacity 120ms ease-out,
+    width 200ms cubic-bezier(0.22, 1, 0.36, 1),
+    height 200ms cubic-bezier(0.22, 1, 0.36, 1),
+    transform 200ms cubic-bezier(0.22, 1, 0.36, 1);
+  will-change: width, height, transform;
+}
+
+.xpe-canvas--dragging .xpe-image,
+.xpe-viewer--navigator-dragging .xpe-image {
   transition: opacity 120ms ease-out;
-  will-change: transform;
 }
 
 .xpe-image--loaded {
@@ -310,6 +328,104 @@
   color: rgba(246, 248, 250, 0.76);
   font-size: 14px;
   transform: translate(-50%, -50%);
+}
+
+.xpe-navigator {
+  position: fixed;
+  bottom: 16px;
+  z-index: 3;
+  display: grid;
+  gap: 7px;
+  justify-items: start;
+  padding: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 8px;
+  background: rgba(16, 22, 30, 0.88);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.38);
+  backdrop-filter: blur(14px);
+}
+
+.xpe-navigator--left {
+  left: 16px;
+}
+
+.xpe-navigator--right {
+  right: 16px;
+}
+
+.xpe-navigator__map {
+  position: relative;
+  overflow: hidden;
+  border-radius: 3px;
+  background: #05080c;
+  cursor: crosshair;
+  touch-action: none;
+}
+
+.xpe-navigator__image {
+  display: block;
+  width: 100%;
+  height: 100%;
+  opacity: 0.72;
+  object-fit: fill;
+  pointer-events: none;
+}
+
+.xpe-navigator__viewport {
+  position: absolute;
+  min-width: 5px;
+  min-height: 5px;
+  border: 2px solid #60a5fa;
+  border-radius: 2px;
+  background: rgba(96, 165, 250, 0.18);
+  box-shadow:
+    0 0 0 1px rgba(0, 0, 0, 0.65),
+    0 0 12px rgba(96, 165, 250, 0.45);
+  pointer-events: none;
+}
+
+.xpe-navigator__scale {
+  color: rgba(246, 248, 250, 0.72);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+
+.xpe-navigator__footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+}
+
+.xpe-navigator__position-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 20px;
+  padding: 0;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: rgba(246, 248, 250, 0.76);
+  cursor: pointer;
+}
+
+.xpe-navigator__position-button:hover {
+  background: rgba(255, 255, 255, 0.12);
+  color: #f6f8fa;
+}
+
+.xpe-navigator__position-button:focus-visible {
+  outline: 2px solid #7dd3fc;
+  outline-offset: 1px;
+}
+
+.xpe-navigator__position-button .xpe-icon {
+  width: 15px;
+  height: 15px;
+  stroke-width: 1.8;
 }
 
 @media (min-width: 900px) {
@@ -378,6 +494,25 @@
   }
 
   .xpe-stage {
-    padding: 64px 24px;
+    padding: 64px 0;
+  }
+
+  .xpe-navigator {
+    bottom: 8px;
+    padding: 6px;
+  }
+
+  .xpe-navigator--left {
+    left: 8px;
+  }
+
+  .xpe-navigator--right {
+    right: 8px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .xpe-image {
+    transition: opacity 120ms ease-out;
   }
 }

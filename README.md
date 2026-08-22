@@ -2,12 +2,9 @@
 
 A Chrome/Edge Manifest V3 extension for viewing X/Twitter images in a focused viewer with automatic viewport fitting, gallery navigation, zoom, and drag-to-pan controls.
 
-## What's new in 1.1.0
+## What's new in 1.2.1
 
-- Images appear sooner by showing X's cached preview immediately, then switching to the asynchronously decoded original image when it is ready.
-- Neighboring originals are prefetched at low priority for faster multi-image navigation.
-- Wide windows show previous and next controls at the left and right edges of the viewer.
-- The toolbar can be placed at the top or bottom, and the selected position is remembered locally.
+- Closing the image viewer now restores the original X/Twitter timeline position instead of jumping back to the top.
 
 ## Development
 
@@ -75,7 +72,7 @@ Store listing copy, privacy policy text, and the release checklist are in `store
 Update only `package.json`:
 
 ```json
-"version": "1.1.0"
+"version": "1.2.1"
 ```
 
 Then run `npm run build` or `npm run package`. The build script writes that version into `dist/manifest.json`, and the package script verifies the generated manifest version matches `package.json`.
@@ -87,8 +84,9 @@ Then run `npm run build` or `npm run package`. The build script writes that vers
 - Use the previous and next buttons to browse every image in a multi-image post.
 - On windows at least 900px wide, use the previous and next buttons at the left and right edges of the viewer.
 - Use the toolbar position button to move the toolbar to the top or bottom; the choice is saved for future viewer sessions.
-- Mouse wheel scrolls the viewer.
+- Mouse wheel scrolls vertically; hold `Ctrl` (or `Command` on macOS) while scrolling to zoom toward the pointer position.
 - Drag pans the image.
+- Use the overview in either lower corner to see the current viewport, click and drag it to navigate, or use its position button to move it between corners.
 - Double-click toggles between fitted and enlarged view.
 - Open the original image in a new tab from the toolbar.
 - `Esc` closes the viewer.

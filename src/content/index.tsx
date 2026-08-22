@@ -22,7 +22,9 @@ type ViewerImage = {
 
 let root: Root | null = null;
 let mountNode: HTMLDivElement | null = null;
-let restoreOverflow = "";
+let restoreDocumentOverflow = "";
+let restoreScrollPosition = { x: 0, y: 0 };
+let restoreScrollFrameId: number | null = null;
 
 function getMountNode(): HTMLDivElement {
   const existing = document.getElementById(ROOT_ID);
@@ -120,6 +122,10 @@ function collectTweetImages(clickedImage: HTMLImageElement): ViewerImage[] {
 }
 
 function closeViewer(): void {
+  if (!root && !mountNode) {
+    return;
+  }
+
   root?.unmount();
   root = null;
 
@@ -128,13 +134,38 @@ function closeViewer(): void {
     mountNode = null;
   }
 
-  document.documentElement.style.overflow = restoreOverflow;
+  document.documentElement.style.overflow = restoreDocumentOverflow;
+
+  const restoreTimelineScroll = () => {
+    const scrollingElement = document.scrollingElement;
+    if (scrollingElement) {
+      scrollingElement.scrollLeft = restoreScrollPosition.x;
+      scrollingElement.scrollTop = restoreScrollPosition.y;
+    }
+    window.scrollTo(restoreScrollPosition.x, restoreScrollPosition.y);
+  };
+
+  restoreScrollFrameId = requestAnimationFrame(() => {
+    restoreTimelineScroll();
+    restoreScrollFrameId = requestAnimationFrame(() => {
+      restoreTimelineScroll();
+      restoreScrollFrameId = null;
+    });
+  });
 }
 
 function openViewer(state: ViewerState): void {
-  closeViewer();
+  if (root || mountNode) {
+    closeViewer();
+  }
 
-  restoreOverflow = document.documentElement.style.overflow;
+  if (restoreScrollFrameId !== null) {
+    cancelAnimationFrame(restoreScrollFrameId);
+    restoreScrollFrameId = null;
+  }
+
+  restoreDocumentOverflow = document.documentElement.style.overflow;
+  restoreScrollPosition = { x: window.scrollX, y: window.scrollY };
   document.documentElement.style.overflow = "hidden";
 
   mountNode = getMountNode();

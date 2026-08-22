@@ -27,7 +27,10 @@ Features:
 - Navigates between every image in a multi-image post without closing the viewer.
 - Shows convenient edge navigation in wide windows and preloads neighboring images for faster browsing.
 - Lets users place the toolbar at the top or bottom and remembers the selected position.
-- Supports mouse wheel scrolling, drag-to-pan, zoom in, zoom out, and reset.
+- Provides smooth animated zoom from the toolbar, keyboard, double-click, or Ctrl/Command + mouse wheel.
+- Keeps normal mouse wheel scrolling for reading tall images.
+- Shows an interactive overview with the current viewport and lets users keep it in either lower corner.
+- Hides horizontal scrollbars while keeping horizontal navigation available through dragging, arrow keys, and the overview.
 - Supports keyboard controls: Esc to close, + and - to zoom, 0 to reset, arrow keys to nudge.
 - Runs only on x.com and twitter.com.
 - No account access, no tracking, no analytics, and no remote service.
@@ -41,7 +44,7 @@ Permission justification:
 The extension requests host access for https://x.com/* and https://twitter.com/* so its content script can detect clicked media images and open the enhanced viewer on those sites.
 
 Storage permission justification:
-The extension uses Chrome storage only to remember local viewer preferences and rating prompt state, including the selected toolbar position, viewer open count, reminder cooldown, and whether the user already rated or dismissed the prompt. This data stays in the browser and is not transmitted.
+The extension uses Chrome storage only to remember local viewer preferences and rating prompt state, including the selected toolbar and overview positions, viewer open count, reminder cooldown, and whether the user already rated or dismissed the prompt. This data stays in the browser and is not transmitted.
 
 Remote code:
 The extension does not use remote code. All JavaScript and CSS are bundled in the extension package.
@@ -70,7 +73,10 @@ X Long Image Viewer 用于改善 X/Twitter 长图浏览体验。点击 x.com 或
 - 无需关闭查看器即可浏览多图帖中的上一张或下一张图片。
 - 宽屏下在页面左右两侧显示翻页按钮，并预加载相邻图片以加快切换速度。
 - 控制栏可以放在页面顶部或底部，并自动记住选择。
-- 支持滚轮滚动、拖拽平移、放大、缩小和重置。
+- 工具栏、键盘、双击以及 Ctrl/Command + 滚轮缩放均带有平滑动画。
+- 普通滚轮用于上下阅读长图，按住 Ctrl/Command 后滚轮用于缩放。
+- 左下角或右下角可放置交互式缩略导航，显示当前视窗并支持点击、拖动定位，位置会自动保存。
+- 始终隐藏横向滚动条，同时保留拖拽、方向键和缩略图横向导航。
 - 支持键盘操作：Esc 关闭，+/- 缩放，0 重置，方向键微调位置。
 - 仅在 x.com 和 twitter.com 运行。
 - 不读取账号数据，不跟踪，不包含分析服务，不依赖远程服务。
@@ -93,7 +99,10 @@ Features:
 - ビューアを閉じずに、複数画像の投稿内を前後に移動できます。
 - 幅の広い画面では左右に移動ボタンを表示し、前後の画像を事前読み込みします。
 - ツールバーを上部または下部に配置でき、選択した位置を保存します。
-- マウスホイールでのスクロール、ドラッグ移動、拡大、縮小、リセットに対応します。
+- ツールバー、キーボード、ダブルクリック、Ctrl/Command + マウスホイールから滑らかにズームできます。
+- 通常のマウスホイール操作では縦長画像を上下にスクロールします。
+- 現在の表示範囲を示す操作可能な全体表示を左右どちらかの下隅に配置し、その位置を保存できます。
+- 横スクロールバーを常に非表示にしながら、ドラッグ、矢印キー、全体表示で横方向に移動できます。
 - キーボード操作に対応します: Esc で閉じる、+/- でズーム、0 でリセット、矢印キーで位置調整。
 - x.com と twitter.com でのみ動作します。
 - アカウント情報の読み取り、追跡、分析、外部サービスへの送信は行いません。
@@ -116,12 +125,26 @@ Features:
 - Navega entre todas as imagens de uma publicação sem fechar o visualizador.
 - Mostra botões de navegação nas laterais em janelas largas e pré-carrega imagens vizinhas.
 - Permite colocar a barra de ferramentas na parte superior ou inferior e salva a posição escolhida.
-- Suporta rolagem com o mouse, arrastar para mover, aumentar zoom, diminuir zoom e redefinir visualização.
+- Oferece zoom animado e suave pela barra de ferramentas, teclado, clique duplo ou Ctrl/Command + roda do mouse.
+- Mantém a rolagem vertical normal da roda do mouse para a leitura de imagens altas.
+- Mostra uma visão geral interativa com a área visível e permite salvá-la em qualquer canto inferior.
+- Oculta a barra de rolagem horizontal, mantendo a navegação por arrasto, setas e visão geral.
 - Suporta atalhos de teclado: Esc para fechar, + e - para zoom, 0 para redefinir e setas para ajustar a posição.
 - Funciona apenas em x.com e twitter.com.
 - Não acessa dados da conta, não rastreia, não usa analytics e não depende de serviço remoto.
 
 ## Release Notes
+
+### 1.2.1
+
+- Fixed the X/Twitter timeline jumping back to the top after closing the image viewer.
+
+### 1.2.0
+
+- Added smooth animated zoom for toolbar, keyboard, double-click, and Ctrl/Command + mouse wheel controls.
+- Added an interactive viewport overview with click-and-drag navigation and a persistent lower-left or lower-right position.
+- Restored normal vertical mouse wheel scrolling when no zoom modifier is held.
+- Removed horizontal scrollbar chrome at every zoom level while preserving drag, keyboard, and overview navigation.
 
 ### 1.1.0
 

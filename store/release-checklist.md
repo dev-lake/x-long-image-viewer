@@ -19,6 +19,10 @@
 - Confirm multi-image navigation works and Open/Close remain visible in narrow windows.
 - At 900px or wider, confirm previous and next buttons appear at the left and right edges and disable correctly on the first and last images.
 - Confirm the toolbar position button moves the toolbar between the top and bottom, persists after reopening the viewer, and does not overlap the rating prompt.
+- Confirm ordinary mouse wheel input scrolls vertically and Ctrl/Command + mouse wheel zooms smoothly toward the pointer.
+- Confirm toolbar, keyboard, and double-click zoom changes animate smoothly.
+- Confirm the overview marks the current viewport, supports click-and-drag navigation, moves between the lower-left and lower-right corners, and persists its selected position.
+- Confirm no horizontal scrollbar appears at any zoom level and wide images remain horizontally navigable by dragging, arrow keys, and the overview.
 - Confirm `dist/manifest.json` includes `default_locale`, `permissions: ["storage"]`, and localized `__MSG_...__` fields.
 - Confirm `dist/manifest.json` has the same `version` as `package.json`.
 - Confirm `dist/_locales` contains `en`, `ja`, `pt_BR`, and `zh_CN`.
@@ -44,7 +48,7 @@ The upload zip is written to `release/`. Omit `VITE_CHROME_WEB_STORE_EXTENSION_I
   - An image automatically fitted and centered in the full-page viewer.
   - Multi-image navigation controls.
   - Wide-screen edge navigation and the toolbar position control.
-  - Zoom controls.
+  - Smooth zoom controls and the viewport overview.
   - Drag or scroll behavior if the store supports promotional screenshots.
 
 ## Final Checks

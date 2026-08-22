@@ -7,8 +7,11 @@ type TranslationKey =
   | "dialogLabel"
   | "loadingImage"
   | "imagePosition"
+  | "imageOverview"
   | "moveToolbarToBottom"
   | "moveToolbarToTop"
+  | "moveOverviewToLeft"
+  | "moveOverviewToRight"
   | "nextImage"
   | "noThanks"
   | "openOriginal"
@@ -31,9 +34,12 @@ const translations: Record<Locale, Record<TranslationKey, string>> = {
     defaultImageAlt: "X image",
     dialogLabel: "Enhanced X image viewer",
     imagePosition: "Image position",
+    imageOverview: "Image overview. Click or drag to move around the image.",
     loadingImage: "Loading image...",
     moveToolbarToBottom: "Move toolbar to bottom",
     moveToolbarToTop: "Move toolbar to top",
+    moveOverviewToLeft: "Move overview to lower left",
+    moveOverviewToRight: "Move overview to lower right",
     nextImage: "Next image",
     noThanks: "No thanks",
     openOriginal: "Open",
@@ -53,9 +59,12 @@ const translations: Record<Locale, Record<TranslationKey, string>> = {
     defaultImageAlt: "X の画像",
     dialogLabel: "拡張 X 画像ビューア",
     imagePosition: "画像の位置",
+    imageOverview: "画像全体表示。クリックまたはドラッグで表示位置を移動します。",
     loadingImage: "画像を読み込み中...",
     moveToolbarToBottom: "ツールバーを下に移動",
     moveToolbarToTop: "ツールバーを上に移動",
+    moveOverviewToLeft: "全体表示を左下に移動",
+    moveOverviewToRight: "全体表示を右下に移動",
     nextImage: "次の画像",
     noThanks: "不要",
     openOriginal: "開く",
@@ -75,9 +84,12 @@ const translations: Record<Locale, Record<TranslationKey, string>> = {
     defaultImageAlt: "Imagem do X",
     dialogLabel: "Visualizador aprimorado de imagens do X",
     imagePosition: "Posição da imagem",
+    imageOverview: "Visão geral da imagem. Clique ou arraste para navegar.",
     loadingImage: "Carregando imagem...",
     moveToolbarToBottom: "Mover barra para baixo",
     moveToolbarToTop: "Mover barra para cima",
+    moveOverviewToLeft: "Mover visão geral para o canto inferior esquerdo",
+    moveOverviewToRight: "Mover visão geral para o canto inferior direito",
     nextImage: "Próxima imagem",
     noThanks: "Agora não",
     openOriginal: "Abrir",
@@ -97,9 +109,12 @@ const translations: Record<Locale, Record<TranslationKey, string>> = {
     defaultImageAlt: "X 图片",
     dialogLabel: "增强版 X 图片查看器",
     imagePosition: "图片位置",
+    imageOverview: "图片缩略导航。点击或拖动可快速定位。",
     loadingImage: "正在加载图片...",
     moveToolbarToBottom: "将控制栏移至下方",
     moveToolbarToTop: "将控制栏移至上方",
+    moveOverviewToLeft: "将缩略图移至左下角",
+    moveOverviewToRight: "将缩略图移至右下角",
     nextImage: "下一张图片",
     noThanks: "不再提示",
     openOriginal: "打开",

@@ -2,6 +2,11 @@ import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } fr
 import { preloadImage } from "../imageLoader";
 import { t } from "../i18n";
 import {
+  readNavigatorPosition,
+  writeNavigatorPosition,
+  type NavigatorPosition
+} from "../navigatorPreference";
+import {
   deferRatingPrompt,
   declineRatingPrompt,
   markRatingPromptAccepted,
@@ -27,10 +32,18 @@ type Point = {
   y: number;
 };
 
+type NavigatorViewport = Point & {
+  width: number;
+  height: number;
+};
+
 const MIN_SCALE = 0.2;
 const MIN_FIT_SCALE = 0.01;
 const MAX_SCALE = 6;
 const SCALE_STEP = 1.2;
+const NAVIGATOR_MAX_WIDTH = 180;
+const NAVIGATOR_MAX_HEIGHT = 120;
+const ZOOM_ANIMATION_DURATION = 220;
 
 function clamp(value: number, min: number, max: number): number {
   return Math.min(Math.max(value, min), max);
@@ -109,28 +122,51 @@ function ResetIcon() {
   );
 }
 
+function NavigatorPositionIcon({ position }: { position: NavigatorPosition }) {
+  const moveRight = position === "left";
+
+  return (
+    <svg className="xpe-icon" viewBox="0 0 24 24" aria-hidden="true">
+      <rect x="3" y="5" width="18" height="14" rx="2" />
+      <rect x={moveRight ? "5" : "15"} y="13" width="4" height="4" rx="0.5" />
+      <path d={moveRight ? "M11 15h7m-2-2 2 2-2 2" : "M13 15H6m2-2-2 2 2 2"} />
+    </svg>
+  );
+}
+
 export function ImageViewer({ images, initialIndex, onClose }: ImageViewerProps) {
   const viewportRef = useRef<HTMLDivElement | null>(null);
+  const imageRef = useRef<HTMLImageElement | null>(null);
+  const navigatorRef = useRef<HTMLDivElement | null>(null);
   const dragStartRef = useRef<Point | null>(null);
   const didDragRef = useRef(false);
   const suppressNextClickRef = useRef(false);
   const translateStartRef = useRef<Point>({ x: 0, y: 0 });
   const hasLoadedRef = useRef(false);
   const naturalSizeRef = useRef({ width: 0, height: 0 });
+  const scaleRef = useRef(1);
 
   const [naturalSize, setNaturalSize] = useState({ width: 0, height: 0 });
   const [viewportSize, setViewportSize] = useState({ width: window.innerWidth, height: window.innerHeight });
   const [scale, setScale] = useState(1);
   const [translate, setTranslate] = useState<Point>({ x: 0, y: 0 });
   const [isDragging, setIsDragging] = useState(false);
+  const [isNavigatorDragging, setIsNavigatorDragging] = useState(false);
   const [hasLoaded, setHasLoaded] = useState(false);
   const [ratingPrompt, setRatingPrompt] = useState<RatingPromptState | null>(null);
   const [toolbarPosition, setToolbarPosition] = useState<ToolbarPosition>("bottom");
+  const [navigatorPosition, setNavigatorPosition] = useState<NavigatorPosition>("left");
   const [currentIndex, setCurrentIndex] = useState(() => clamp(initialIndex, 0, Math.max(images.length - 1, 0)));
   const [imageSource, setImageSource] = useState(() => ({
     imageUrl: images[currentIndex]?.url ?? "",
     src: images[currentIndex]?.previewUrl || images[currentIndex]?.url || ""
   }));
+  const [navigatorViewport, setNavigatorViewport] = useState<NavigatorViewport>({
+    x: 0,
+    y: 0,
+    width: 0,
+    height: 0
+  });
 
   const currentImage = images[currentIndex] ?? images[0];
   const hasMultipleImages = images.length > 1;
@@ -153,6 +189,53 @@ export function ImageViewer({ images, initialIndex, onClose }: ImageViewerProps)
     [naturalSize.height, naturalSize.width, scale]
   );
 
+  const navigatorSize = useMemo(() => {
+    if (!naturalSize.width || !naturalSize.height) {
+      return { width: 0, height: 0 };
+    }
+
+    const maxWidth = viewportSize.width <= 560 ? 122 : NAVIGATOR_MAX_WIDTH;
+    const navigatorScale = Math.min(
+      maxWidth / naturalSize.width,
+      NAVIGATOR_MAX_HEIGHT / naturalSize.height
+    );
+
+    return {
+      width: naturalSize.width * navigatorScale,
+      height: naturalSize.height * navigatorScale
+    };
+  }, [naturalSize.height, naturalSize.width, viewportSize.width]);
+
+  const updateNavigatorViewport = useCallback(() => {
+    const viewport = viewportRef.current;
+    const image = imageRef.current;
+
+    if (!viewport || !image || !navigatorSize.width || !navigatorSize.height) {
+      return;
+    }
+
+    const viewportRect = viewport.getBoundingClientRect();
+    const imageRect = image.getBoundingClientRect();
+
+    if (!imageRect.width || !imageRect.height) {
+      return;
+    }
+
+    const visibleLeft = clamp(viewportRect.left - imageRect.left, 0, imageRect.width);
+    const visibleTop = clamp(viewportRect.top - imageRect.top, 0, imageRect.height);
+    const visibleRight = clamp(viewportRect.right - imageRect.left, 0, imageRect.width);
+    const visibleBottom = clamp(viewportRect.bottom - imageRect.top, 0, imageRect.height);
+    const width = Math.max((visibleRight - visibleLeft) * (navigatorSize.width / imageRect.width), 0);
+    const height = Math.max((visibleBottom - visibleTop) * (navigatorSize.height / imageRect.height), 0);
+
+    setNavigatorViewport({
+      x: visibleLeft * (navigatorSize.width / imageRect.width),
+      y: visibleTop * (navigatorSize.height / imageRect.height),
+      width,
+      height
+    });
+  }, [navigatorSize.height, navigatorSize.width]);
+
   const centerViewport = useCallback(() => {
     const viewport = viewportRef.current;
     if (!viewport) {
@@ -166,6 +249,7 @@ export function ImageViewer({ images, initialIndex, onClose }: ImageViewerProps)
   }, []);
 
   const resetView = useCallback(() => {
+    scaleRef.current = fitScale;
     setScale(fitScale);
     setTranslate({ x: 0, y: 0 });
     requestAnimationFrame(centerViewport);
@@ -178,6 +262,7 @@ export function ImageViewer({ images, initialIndex, onClose }: ImageViewerProps)
     translateStartRef.current = { x: 0, y: 0 };
     hasLoadedRef.current = false;
     naturalSizeRef.current = { width: 0, height: 0 };
+    scaleRef.current = 1;
     setNaturalSize({ width: 0, height: 0 });
     setScale(1);
     setTranslate({ x: 0, y: 0 });
@@ -200,9 +285,10 @@ export function ImageViewer({ images, initialIndex, onClose }: ImageViewerProps)
   );
 
   const zoomAt = useCallback((nextScale: number, origin?: Point) => {
-    setScale((currentScale) => {
-      const clampedScale = clamp(nextScale, MIN_SCALE, MAX_SCALE);
+    const clampedScale = clamp(nextScale, Math.min(MIN_SCALE, fitScale), MAX_SCALE);
+    scaleRef.current = clampedScale;
 
+    setScale((currentScale) => {
       if (!origin || currentScale === clampedScale) {
         return clampedScale;
       }
@@ -223,13 +309,13 @@ export function ImageViewer({ images, initialIndex, onClose }: ImageViewerProps)
 
       return clampedScale;
     });
-  }, []);
+  }, [fitScale]);
 
   const zoomBy = useCallback(
     (factor: number, origin?: Point) => {
-      zoomAt(scale * factor, origin);
+      zoomAt(scaleRef.current * factor, origin);
     },
-    [scale, zoomAt]
+    [zoomAt]
   );
 
   const zoomToActualSize = useCallback(() => {
@@ -244,14 +330,14 @@ export function ImageViewer({ images, initialIndex, onClose }: ImageViewerProps)
       setViewportSize(nextViewportSize);
 
       if (hasLoadedRef.current && naturalSizeRef.current.width && naturalSizeRef.current.height) {
-        setScale(
-          calculateFitScale(
+        const nextScale = calculateFitScale(
             naturalSizeRef.current.width,
             naturalSizeRef.current.height,
             nextViewportSize.width,
             nextViewportSize.height
-          )
-        );
+          );
+        scaleRef.current = nextScale;
+        setScale(nextScale);
         setTranslate({ x: 0, y: 0 });
         requestAnimationFrame(centerViewport);
       }
@@ -264,8 +350,27 @@ export function ImageViewer({ images, initialIndex, onClose }: ImageViewerProps)
   useLayoutEffect(() => {
     if (hasLoaded) {
       centerViewport();
+      updateNavigatorViewport();
     }
-  }, [centerViewport, hasLoaded]);
+  }, [centerViewport, hasLoaded, updateNavigatorViewport]);
+
+  useEffect(() => {
+    if (!hasLoaded) {
+      return;
+    }
+
+    let animationFrameId = 0;
+    const startedAt = performance.now();
+    const trackAnimation = () => {
+      updateNavigatorViewport();
+      if (performance.now() - startedAt < ZOOM_ANIMATION_DURATION + 40) {
+        animationFrameId = requestAnimationFrame(trackAnimation);
+      }
+    };
+
+    animationFrameId = requestAnimationFrame(trackAnimation);
+    return () => cancelAnimationFrame(animationFrameId);
+  }, [hasLoaded, scale, translate, updateNavigatorViewport, viewportSize]);
 
   useEffect(() => {
     setCurrentIndex((index) => clamp(index, 0, Math.max(images.length - 1, 0)));
@@ -337,6 +442,20 @@ export function ImageViewer({ images, initialIndex, onClose }: ImageViewerProps)
   useEffect(() => {
     let isMounted = true;
 
+    void readNavigatorPosition().then((position) => {
+      if (isMounted) {
+        setNavigatorPosition(position);
+      }
+    });
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    let isMounted = true;
+
     void readToolbarPosition().then((position) => {
       if (isMounted) {
         setToolbarPosition(position);
@@ -354,20 +473,23 @@ export function ImageViewer({ images, initialIndex, onClose }: ImageViewerProps)
       return;
     }
 
-    const handleWheelScroll = (event: WheelEvent) => {
-      event.preventDefault();
+    const handleWheel = (event: WheelEvent) => {
       event.stopImmediatePropagation();
 
-      viewport.scrollBy({
-        top: event.deltaY,
-        left: event.shiftKey ? event.deltaY : event.deltaX,
-        behavior: "instant"
-      });
+      if (!event.ctrlKey && !event.metaKey) {
+        return;
+      }
+
+      event.preventDefault();
+
+      const normalizedDelta = clamp(event.deltaY, -120, 120);
+      const factor = Math.exp(-normalizedDelta * 0.0025);
+      zoomBy(factor, { x: event.clientX, y: event.clientY });
     };
 
-    viewport.addEventListener("wheel", handleWheelScroll, { capture: true, passive: false });
-    return () => viewport.removeEventListener("wheel", handleWheelScroll, { capture: true });
-  }, []);
+    viewport.addEventListener("wheel", handleWheel, { capture: true, passive: false });
+    return () => viewport.removeEventListener("wheel", handleWheel, { capture: true });
+  }, [zoomBy]);
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -416,14 +538,20 @@ export function ImageViewer({ images, initialIndex, onClose }: ImageViewerProps)
       const sizeRatio = naturalSizeRef.current.width / nextNaturalSize.width;
       naturalSizeRef.current = nextNaturalSize;
       setNaturalSize(nextNaturalSize);
-      setScale((currentScale) => currentScale * sizeRatio);
+      setScale((currentScale) => {
+        const nextScale = currentScale * sizeRatio;
+        scaleRef.current = nextScale;
+        return nextScale;
+      });
       return;
     }
 
     naturalSizeRef.current = nextNaturalSize;
     hasLoadedRef.current = true;
     setNaturalSize(nextNaturalSize);
-    setScale(calculateFitScale(nextNaturalSize.width, nextNaturalSize.height, viewportSize.width, viewportSize.height));
+    const nextScale = calculateFitScale(nextNaturalSize.width, nextNaturalSize.height, viewportSize.width, viewportSize.height);
+    scaleRef.current = nextScale;
+    setScale(nextScale);
     setTranslate({ x: 0, y: 0 });
     setHasLoaded(true);
   };
@@ -491,6 +619,60 @@ export function ImageViewer({ images, initialIndex, onClose }: ImageViewerProps)
     zoomAt(nextScale, { x: event.clientX, y: event.clientY });
   };
 
+  const moveFromNavigator = (clientX: number, clientY: number) => {
+    const navigator = navigatorRef.current;
+    const viewport = viewportRef.current;
+    const image = imageRef.current;
+
+    if (!navigator || !viewport || !image) {
+      return;
+    }
+
+    const navigatorRect = navigator.getBoundingClientRect();
+    const viewportRect = viewport.getBoundingClientRect();
+    const imageRect = image.getBoundingClientRect();
+    const relativeX = clamp((clientX - navigatorRect.left) / navigatorRect.width, 0, 1);
+    const relativeY = clamp((clientY - navigatorRect.top) / navigatorRect.height, 0, 1);
+    const targetX = imageRect.left + imageRect.width * relativeX;
+    const targetY = imageRect.top + imageRect.height * relativeY;
+
+    setTranslate((current) => ({
+      x: current.x + viewportRect.left + viewportRect.width / 2 - targetX,
+      y: current.y + viewportRect.top + viewportRect.height / 2 - targetY
+    }));
+  };
+
+  const handleNavigatorPointerDown = (event: React.PointerEvent<HTMLDivElement>) => {
+    if (event.button !== 0) {
+      return;
+    }
+
+    event.preventDefault();
+    event.stopPropagation();
+    event.currentTarget.setPointerCapture(event.pointerId);
+    setIsNavigatorDragging(true);
+    moveFromNavigator(event.clientX, event.clientY);
+  };
+
+  const handleNavigatorPointerMove = (event: React.PointerEvent<HTMLDivElement>) => {
+    if (!event.currentTarget.hasPointerCapture(event.pointerId)) {
+      return;
+    }
+
+    event.preventDefault();
+    event.stopPropagation();
+    moveFromNavigator(event.clientX, event.clientY);
+  };
+
+  const handleNavigatorPointerUp = (event: React.PointerEvent<HTMLDivElement>) => {
+    event.preventDefault();
+    event.stopPropagation();
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+      event.currentTarget.releasePointerCapture(event.pointerId);
+    }
+    setIsNavigatorDragging(false);
+  };
+
   const handleRateClick = () => {
     if (!ratingPrompt?.storeUrl) {
       return;
@@ -517,6 +699,12 @@ export function ImageViewer({ images, initialIndex, onClose }: ImageViewerProps)
     void writeToolbarPosition(nextPosition);
   };
 
+  const handleNavigatorPositionClick = () => {
+    const nextPosition: NavigatorPosition = navigatorPosition === "left" ? "right" : "left";
+    setNavigatorPosition(nextPosition);
+    void writeNavigatorPosition(nextPosition);
+  };
+
   if (!currentImage) {
     return null;
   }
@@ -528,7 +716,12 @@ export function ImageViewer({ images, initialIndex, onClose }: ImageViewerProps)
   };
 
   return (
-    <div className="xpe-viewer" role="dialog" aria-modal="true" aria-label={t("dialogLabel")}>
+    <div
+      className={`xpe-viewer${isNavigatorDragging ? " xpe-viewer--navigator-dragging" : ""}`}
+      role="dialog"
+      aria-modal="true"
+      aria-label={t("dialogLabel")}
+    >
       <div
         className={`xpe-toolbar xpe-toolbar--${toolbarPosition}`}
         onClick={(event) => event.stopPropagation()}
@@ -662,6 +855,48 @@ export function ImageViewer({ images, initialIndex, onClose }: ImageViewerProps)
         </div>
       )}
 
+      {hasLoaded && navigatorSize.width > 0 && navigatorSize.height > 0 && (
+        <div
+          className={`xpe-navigator xpe-navigator--${navigatorPosition}`}
+          onClick={(event) => event.stopPropagation()}
+        >
+          <div
+            ref={navigatorRef}
+            className="xpe-navigator__map"
+            style={{ width: `${navigatorSize.width}px`, height: `${navigatorSize.height}px` }}
+            role="img"
+            aria-label={t("imageOverview")}
+            onPointerDown={handleNavigatorPointerDown}
+            onPointerMove={handleNavigatorPointerMove}
+            onPointerUp={handleNavigatorPointerUp}
+            onPointerCancel={handleNavigatorPointerUp}
+          >
+            <img className="xpe-navigator__image" src={displayedSrc} alt="" draggable={false} />
+            <span
+              className="xpe-navigator__viewport"
+              style={{
+                left: `${navigatorViewport.x}px`,
+                top: `${navigatorViewport.y}px`,
+                width: `${navigatorViewport.width}px`,
+                height: `${navigatorViewport.height}px`
+              }}
+            />
+          </div>
+          <div className="xpe-navigator__footer">
+            <span className="xpe-navigator__scale">{formatScale(scale)}</span>
+            <button
+              type="button"
+              className="xpe-navigator__position-button"
+              onClick={handleNavigatorPositionClick}
+              title={navigatorPosition === "left" ? t("moveOverviewToRight") : t("moveOverviewToLeft")}
+              aria-label={navigatorPosition === "left" ? t("moveOverviewToRight") : t("moveOverviewToLeft")}
+            >
+              <NavigatorPositionIcon position={navigatorPosition} />
+            </button>
+          </div>
+        </div>
+      )}
+
       <div
         ref={viewportRef}
         className={`xpe-canvas${isDragging ? " xpe-canvas--dragging" : ""}`}
@@ -671,14 +906,16 @@ export function ImageViewer({ images, initialIndex, onClose }: ImageViewerProps)
         onPointerUp={stopDragging}
         onPointerCancel={stopDragging}
         onDoubleClick={handleDoubleClick}
+        onScroll={updateNavigatorViewport}
       >
         <div
           className="xpe-stage"
-          style={{ minWidth: `${Math.max(renderedSize.width + (viewportSize.width <= 560 ? 48 : 96), viewportSize.width)}px` }}
+          style={{ minWidth: `${renderedSize.width}px` }}
           onClick={handleSurfaceClick}
         >
           {!hasLoaded && <div className="xpe-loading">{t("loadingImage")}</div>}
           <img
+            ref={imageRef}
             key={currentImage.url}
             className={`xpe-image${hasLoaded ? " xpe-image--loaded" : ""}`}
             src={displayedSrc}
