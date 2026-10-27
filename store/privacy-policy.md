@@ -4,15 +4,14 @@ Effective date: 2026-10-27
 
 X Long Image Viewer is a browser extension for viewing long images on X/Twitter.
 
-## Data Collection
+## Data Handling
 
 The extension does not send personal information or page content to the developer, sell it, or use it for analytics.
 
-The extension does not collect:
+The extension does not collect for analytics or send to the developer:
 - Personally identifiable information
 - Authentication information
 - Browsing history
-- Website content for analytics or transmission to the developer
 - Location data
 - User activity analytics
 
@@ -38,6 +37,10 @@ This access is required so the extension can detect clicked media images and dis
 Access to pbs.twimg.com lets the extension fetch only the selected media image for local recognition. The offscreen permission runs the bundled OCR worker in a local extension document.
 
 The extension also requests the Chrome storage permission to save the toolbar position preference and local rating prompt state. Stored values stay in the browser and are not transmitted.
+
+## Limited Use
+
+Use of user data complies with the Chrome Web Store User Data Policy, including its Limited Use requirements. Selected website images and their recognized text are used only to provide the viewer and text selection features described above.
 
 ## Remote Services
 
