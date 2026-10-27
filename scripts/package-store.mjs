@@ -101,7 +101,6 @@ async function main() {
   const storeExtensionId = getStoreExtensionId();
   validateStoreExtensionId(storeExtensionId);
 
-  rmSync(releaseDir, { recursive: true, force: true });
   mkdirSync(releaseDir, { recursive: true });
 
   run("npm", ["run", "build"]);
@@ -122,6 +121,11 @@ async function main() {
   requireFile("manifest.json");
   requireFile("assets/content.js");
   requireFile("assets/content.css");
+  for (const path of ["background.js", "ocr/offscreen.html", "ocr/offscreen.js", "ocr/text-normalization.js", "ocr/tesseract.min.js", "ocr/worker.min.js", "ocr/worker.js", "ocr/lang/eng.traineddata.gz", "ocr/lang/chi_sim.traineddata.gz"]) requireFile(path);
+  for (const variant of ["lstm", "simd-lstm", "relaxedsimd-lstm"]) {
+    requireFile(`ocr/core/tesseract-core-${variant}.wasm.js`);
+    requireFile(`ocr/core/tesseract-core-${variant}.wasm`);
+  }
   await validateContentBundle(storeExtensionId);
 
   for (const locale of ["en", "ja", "pt_BR", "zh_CN"]) {
@@ -132,6 +136,7 @@ async function main() {
     requireFile(manifest.icons?.[size] ?? `icons/icon-${size}.png`);
   }
 
+  rmSync(outputPath, { force: true });
   zipDist(outputPath);
   console.log(`Created ${join(basename(releaseDir), basename(outputPath))}`);
 }

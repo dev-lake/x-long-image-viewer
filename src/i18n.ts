@@ -1,6 +1,15 @@
 type Locale = "en" | "ja" | "pt_BR" | "zh_CN";
 
 type TranslationKey =
+  | "selectText"
+  | "exitTextMode"
+  | "copyAllText"
+  | "textCopied"
+  | "recognizingText"
+  | "recognitionFailed"
+  | "selectTextHint"
+  | "noTextFound"
+  | "copyTextFailed"
   | "close"
   | "currentZoom"
   | "defaultImageAlt"
@@ -29,6 +38,16 @@ const DEFAULT_LOCALE: Locale = "en";
 
 const translations: Record<Locale, Record<TranslationKey, string>> = {
   en: {
+    selectText: "Select text",
+    exitTextMode: "Exit text mode",
+    copyAllText: "Copy all",
+    textCopied: "Copied",
+    recognizingText: "Recognizing text…",
+    recognitionFailed: "Recognition failed. Exit and try again.",
+    selectTextHint: "Drag to select text, then copy. Scroll to move through the image.",
+    noTextFound: "No text found.",
+    copyTextFailed: "Copy failed. Select text and press Ctrl+C / ⌘C.",
+
     close: "Close",
     currentZoom: "Current zoom",
     defaultImageAlt: "X image",
@@ -54,6 +73,16 @@ const translations: Record<Locale, Record<TranslationKey, string>> = {
     zoomOut: "Zoom out"
   },
   ja: {
+    selectText: "文字を選択",
+    exitTextMode: "選択を終了",
+    copyAllText: "すべてコピー",
+    textCopied: "コピー済み",
+    recognizingText: "文字を認識中…",
+    recognitionFailed: "認識できませんでした。終了して再試行してください。",
+    selectTextHint: "ドラッグで文字を選択してコピー。スクロールで画像を移動。",
+    noTextFound: "文字が見つかりません。",
+    copyTextFailed: "コピーできません。選択後 Ctrl+C / ⌘C を押してください。",
+
     close: "閉じる",
     currentZoom: "現在のズーム",
     defaultImageAlt: "X の画像",
@@ -79,6 +108,16 @@ const translations: Record<Locale, Record<TranslationKey, string>> = {
     zoomOut: "縮小"
   },
   pt_BR: {
+    selectText: "Selecionar texto",
+    exitTextMode: "Sair da seleção",
+    copyAllText: "Copiar tudo",
+    textCopied: "Copiado",
+    recognizingText: "Reconhecendo texto…",
+    recognitionFailed: "Falha no reconhecimento. Saia e tente novamente.",
+    selectTextHint: "Arraste para selecionar e copiar. Role para navegar na imagem.",
+    noTextFound: "Nenhum texto encontrado.",
+    copyTextFailed: "Falha ao copiar. Selecione o texto e pressione Ctrl+C / ⌘C.",
+
     close: "Fechar",
     currentZoom: "Zoom atual",
     defaultImageAlt: "Imagem do X",
@@ -104,6 +143,16 @@ const translations: Record<Locale, Record<TranslationKey, string>> = {
     zoomOut: "Diminuir zoom"
   },
   zh_CN: {
+    selectText: "选择文字",
+    exitTextMode: "退出选字",
+    copyAllText: "复制全部",
+    textCopied: "已复制",
+    recognizingText: "正在识别文字…",
+    recognitionFailed: "识别失败，请退出选字后重试。",
+    selectTextHint: "拖动选中文字后复制，滚动可浏览图片。",
+    noTextFound: "未识别到文字。",
+    copyTextFailed: "复制失败，请选中文字后按 Ctrl+C / ⌘C。",
+
     close: "关闭",
     currentZoom: "当前缩放",
     defaultImageAlt: "X 图片",

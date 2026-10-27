@@ -2,9 +2,12 @@
 
 A Chrome/Edge Manifest V3 extension for viewing X/Twitter images in a focused viewer with automatic viewport fitting, gallery navigation, zoom, and drag-to-pan controls.
 
-## What's new in 1.2.1
+## What's new in 2.0.0
 
-- Closing the image viewer now restores the original X/Twitter timeline position instead of jumping back to the top.
+- Select and copy English and Simplified Chinese text directly from images, or copy all recognized text.
+- Use the redesigned toolbar and hover or focus on its controls for hints.
+- See the image overview only when the image extends beyond the viewport; horizontal overview navigation is limited when the image fits.
+- Handle extension reloads more gracefully when an existing X/Twitter tab still has an older content script.
 
 ## Development
 
@@ -28,6 +31,7 @@ npm run build
 - `manifest.json`
 - `assets/content.js`
 - `assets/content.css`
+- `background.js` and `ocr/` for image text recognition
 - `_locales/` for Chrome extension localization
 - `icons/`
 
@@ -72,7 +76,7 @@ Store listing copy, privacy policy text, and the release checklist are in `store
 Update only `package.json`:
 
 ```json
-"version": "1.2.1"
+"version": "2.0.0"
 ```
 
 Then run `npm run build` or `npm run package`. The build script writes that version into `dist/manifest.json`, and the package script verifies the generated manifest version matches `package.json`.
@@ -83,12 +87,23 @@ Then run `npm run build` or `npm run package`. The build script writes that vers
 - Images automatically fit and center within the available viewport when opened.
 - Use the previous and next buttons to browse every image in a multi-image post.
 - On windows at least 900px wide, use the previous and next buttons at the left and right edges of the viewer.
+- Click the zoom percentage in the toolbar to show the image at 100% size.
 - Use the toolbar position button to move the toolbar to the top or bottom; the choice is saved for future viewer sessions.
 - Mouse wheel scrolls vertically; hold `Ctrl` (or `Command` on macOS) while scrolling to zoom toward the pointer position.
 - Drag pans the image.
-- Use the overview in either lower corner to see the current viewport, click and drag it to navigate, or use its position button to move it between corners.
+- When the image exceeds 110% of the viewport in either dimension, use the overview in either lower corner to see and navigate the current viewport.
 - Double-click toggles between fitted and enlarged view.
 - Open the original image in a new tab from the toolbar.
 - `Esc` closes the viewer.
 - `+`, `-`, and `0` zoom or reset.
 - Arrow keys nudge the image position.
+
+## Image text selection
+
+Click **Select text** in the viewer to recognize English and Simplified Chinese locally. Drag over the image text and press Ctrl+C / Command+C, or choose **Copy all**. Exit text mode to resume drag-to-pan. Scrolling, zooming and the overview remain available in text mode.
+
+Recognition starts only on request. Results for up to eight images are kept in memory until the page reloads; images and recognized text are not uploaded. Models and the OCR engine are bundled, adding approximately 53 MB to the unpacked extension.
+
+Requires Chrome/Edge 116 or newer. Reload the extension and refresh X/Twitter tabs after building; the new offscreen permission and pbs.twimg.com access support local recognition. Very large images (over 40 million pixels) are rejected to bound memory use. Small, rotated, handwritten or complex layouts may be inaccurate; reading order and selection alignment depend on OCR results.
+
+Validation: `node --test scripts/test-ocr.mjs scripts/test-extension-context.mjs` checks message routing, allowed image URLs, concurrent offscreen creation and recovery. `npm run build` checks TypeScript and bundles all OCR assets. Before release, test the unpacked extension on X/Twitter, including reload, multi-image navigation, image loading failures and long-image performance.

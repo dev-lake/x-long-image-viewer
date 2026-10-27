@@ -1,4 +1,4 @@
-import { readFile, writeFile } from "node:fs/promises";
+import { cp, mkdir, readFile, writeFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
@@ -44,7 +44,29 @@ async function syncManifestVersion() {
 function manifestVersionPlugin() {
   return {
     name: "xpe-manifest-version",
-    writeBundle: syncManifestVersion
+    async writeBundle() {
+      await syncManifestVersion();
+      const ocrDir = join(distDir, "ocr");
+      await mkdir(join(ocrDir, "core"), { recursive: true });
+      await mkdir(join(ocrDir, "lang"), { recursive: true });
+      for (const file of ["tesseract.min.js", "worker.min.js"]) {
+        await cp(join(rootDir, "node_modules/tesseract.js/dist", file), join(ocrDir, file));
+      }
+      for (const variant of ["lstm", "simd-lstm", "relaxedsimd-lstm"]) {
+        for (const suffix of ["wasm.js", "wasm"]) {
+          const file = `tesseract-core-${variant}.${suffix}`;
+          await cp(join(rootDir, "node_modules/tesseract.js-core", file), join(ocrDir, "core", file));
+        }
+      }
+      for (const language of ["eng", "chi_sim"]) {
+        await cp(join(rootDir, `node_modules/@tesseract.js-data/${language}/4.0.0/${language}.traineddata.gz`),
+          join(ocrDir, "lang", `${language}.traineddata.gz`));
+      }
+      for (const [source, name] of [
+        ["tesseract.js/LICENSE.md", "TESSERACT-LICENSE.md"],
+        ["tesseract.js-core/LICENSE", "CORE-LICENSE"]
+      ]) await cp(join(rootDir, "node_modules", source), join(ocrDir, name));
+    }
   };
 }
 

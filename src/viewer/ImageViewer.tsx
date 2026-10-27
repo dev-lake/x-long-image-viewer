@@ -1,4 +1,7 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { recognizeImage, type OcrResult } from "../ocr/client";
+import { TextLayer } from "../ocr/TextLayer";
+import { Toolbar } from "./Toolbar";
 import { preloadImage } from "../imageLoader";
 import { t } from "../i18n";
 import {
@@ -43,6 +46,7 @@ const MAX_SCALE = 6;
 const SCALE_STEP = 1.2;
 const NAVIGATOR_MAX_WIDTH = 180;
 const NAVIGATOR_MAX_HEIGHT = 120;
+const NAVIGATOR_OVERFLOW_THRESHOLD = 1.1;
 const ZOOM_ANIMATION_DURATION = 220;
 
 function clamp(value: number, min: number, max: number): number {
@@ -110,6 +114,26 @@ function ToolbarPositionIcon({ position }: { position: ToolbarPosition }) {
   );
 }
 
+function CopyIcon({ copied }: { copied: boolean }) {
+  return (
+    <svg className="xpe-icon" viewBox="0 0 24 24" aria-hidden="true">
+      {copied ? <path d="m5 12 4 4L19 6" /> : <>
+        <rect x="8" y="8" width="12" height="12" rx="2" />
+        <path d="M16 8V5a1 1 0 0 0-1-1H5a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h3" />
+      </>}
+    </svg>
+  );
+}
+
+function SelectTextIcon() {
+  return (
+    <svg className="xpe-icon" viewBox="0 0 24 24" aria-hidden="true">
+      <path d="M8 4H5a1 1 0 0 0-1 1v3M16 4h3a1 1 0 0 1 1 1v3M20 16v3a1 1 0 0 1-1 1h-3M8 20H5a1 1 0 0 1-1-1v-3" />
+      <path d="M8 9V8h8v1M12 8v8M10 16h4" />
+    </svg>
+  );
+}
+
 function ResetIcon() {
   return (
     <svg className="xpe-icon" viewBox="0 0 24 24" aria-hidden="true">
@@ -135,6 +159,10 @@ function NavigatorPositionIcon({ position }: { position: NavigatorPosition }) {
 }
 
 export function ImageViewer({ images, initialIndex, onClose }: ImageViewerProps) {
+  const [textMode, setTextMode] = useState(false);
+  const [ocrResult, setOcrResult] = useState<OcrResult | null>(null);
+  const [ocrStatus, setOcrStatus] = useState<"idle" | "loading" | "ready" | "error">("idle");
+  const [copyStatus, setCopyStatus] = useState<"idle" | "copied" | "error">("idle");
   const viewportRef = useRef<HTMLDivElement | null>(null);
   const imageRef = useRef<HTMLImageElement | null>(null);
   const navigatorRef = useRef<HTMLDivElement | null>(null);
@@ -170,6 +198,38 @@ export function ImageViewer({ images, initialIndex, onClose }: ImageViewerProps)
 
   const currentImage = images[currentIndex] ?? images[0];
   const hasMultipleImages = images.length > 1;
+
+  useEffect(() => {
+    setTextMode(false);
+    setOcrResult(null);
+    setOcrStatus("idle");
+    setCopyStatus("idle");
+  }, [currentImage.url]);
+
+  useEffect(() => {
+    if (!textMode || ocrResult) return;
+    let active = true;
+    setOcrStatus("loading");
+    recognizeImage(currentImage.url).then(result => {
+      if (!active) return;
+      setOcrResult(result);
+      setOcrStatus("ready");
+    }, () => { if (active) setOcrStatus("error"); });
+    return () => { active = false; };
+  }, [textMode, currentImage.url, ocrResult]);
+
+  const isRecognizing = textMode && ocrStatus === "loading";
+
+  const copyAllText = async () => {
+    if (!ocrResult?.text) return;
+    try {
+      await navigator.clipboard.writeText(ocrResult.text);
+      setCopyStatus("copied");
+    } catch {
+      setCopyStatus("error");
+    }
+  };
+
   const displayedSrc =
     imageSource.imageUrl === currentImage?.url ? imageSource.src : currentImage?.previewUrl || currentImage?.url || "";
 
@@ -188,6 +248,15 @@ export function ImageViewer({ images, initialIndex, onClose }: ImageViewerProps)
     }),
     [naturalSize.height, naturalSize.width, scale]
   );
+
+  const showNavigator = hasLoaded && (
+    renderedSize.width > viewportSize.width * NAVIGATOR_OVERFLOW_THRESHOLD ||
+    renderedSize.height > viewportSize.height * NAVIGATOR_OVERFLOW_THRESHOLD
+  );
+
+  useEffect(() => {
+    if (!showNavigator) setIsNavigatorDragging(false);
+  }, [showNavigator]);
 
   const navigatorSize = useMemo(() => {
     if (!naturalSize.width || !naturalSize.height) {
@@ -499,6 +568,8 @@ export function ImageViewer({ images, initialIndex, onClose }: ImageViewerProps)
         return;
       }
 
+      if (event.ctrlKey || event.metaKey) return;
+
       if (event.key === "+" || event.key === "=") {
         event.preventDefault();
         zoomBy(SCALE_STEP);
@@ -557,7 +628,7 @@ export function ImageViewer({ images, initialIndex, onClose }: ImageViewerProps)
   };
 
   const handlePointerDown = (event: React.PointerEvent<HTMLDivElement>) => {
-    if (event.button !== 0 || !hasLoaded) {
+    if (textMode || event.button !== 0 || !hasLoaded) {
       return;
     }
 
@@ -611,7 +682,7 @@ export function ImageViewer({ images, initialIndex, onClose }: ImageViewerProps)
   };
 
   const handleDoubleClick = (event: React.MouseEvent<HTMLDivElement>) => {
-    if (!hasLoaded) {
+    if (textMode || !hasLoaded) {
       return;
     }
 
@@ -635,9 +706,12 @@ export function ImageViewer({ images, initialIndex, onClose }: ImageViewerProps)
     const relativeY = clamp((clientY - navigatorRect.top) / navigatorRect.height, 0, 1);
     const targetX = imageRect.left + imageRect.width * relativeX;
     const targetY = imageRect.top + imageRect.height * relativeY;
+    const canPanHorizontally = imageRect.width > viewport.clientWidth;
 
     setTranslate((current) => ({
-      x: current.x + viewportRect.left + viewportRect.width / 2 - targetX,
+      x: canPanHorizontally
+        ? current.x + viewportRect.left + viewport.clientWidth / 2 - targetX
+        : current.x,
       y: current.y + viewportRect.top + viewportRect.height / 2 - targetY
     }));
   };
@@ -722,33 +796,42 @@ export function ImageViewer({ images, initialIndex, onClose }: ImageViewerProps)
       aria-modal="true"
       aria-label={t("dialogLabel")}
     >
-      <div
-        className={`xpe-toolbar xpe-toolbar--${toolbarPosition}`}
-        onClick={(event) => event.stopPropagation()}
-      >
+      <Toolbar position={toolbarPosition}>
         <div className="xpe-toolbar-controls">
-          <div className="xpe-toolbar-group">
-            <button type="button" className="xpe-button" onClick={() => zoomBy(1 / SCALE_STEP)} title={t("zoomOut")}>
-              -
+          <div className="xpe-toolbar-group xpe-zoom-controls">
+            <button type="button" className="xpe-button xpe-icon-button" onClick={() => zoomBy(1 / SCALE_STEP)} data-tooltip={t("zoomOut")} aria-label={t("zoomOut")}>
+              <svg className="xpe-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 12h12" /></svg>
             </button>
-            <span className="xpe-scale" aria-label={t("currentZoom")}>
+            <button type="button" className="xpe-button xpe-scale" onClick={zoomToActualSize}
+              data-tooltip={t("actualSize")} aria-label={`${t("currentZoom")} ${formatScale(scale)}. ${t("actualSize")}`}>
               {formatScale(scale)}
-            </span>
-            <button type="button" className="xpe-button" onClick={() => zoomBy(SCALE_STEP)} title={t("zoomIn")}>
-              +
             </button>
-            <button type="button" className="xpe-button" onClick={zoomToActualSize} title={t("actualSize")}>
-              100%
+            <button type="button" className="xpe-button xpe-icon-button" onClick={() => zoomBy(SCALE_STEP)} data-tooltip={t("zoomIn")} aria-label={t("zoomIn")}>
+              <svg className="xpe-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 12h12M12 6v12" /></svg>
             </button>
             <button
               type="button"
               className="xpe-button xpe-icon-button"
               onClick={resetView}
-              title={t("resetView")}
+              data-tooltip={t("resetView")}
               aria-label={t("resetView")}
             >
               <ResetIcon />
             </button>
+          </div>
+          <div className="xpe-toolbar-group">
+            <button type="button" className="xpe-button xpe-icon-button" disabled={!hasLoaded}
+              data-tooltip={textMode ? t("exitTextMode") : t("selectText")}
+              aria-label={textMode ? t("exitTextMode") : t("selectText")}
+              aria-busy={isRecognizing}
+              aria-pressed={textMode} onClick={() => { setTextMode(value => !value); setCopyStatus("idle"); }}>
+              {isRecognizing ? <span className="xpe-ocr-spinner xpe-ocr-spinner--button" aria-hidden="true" /> : <SelectTextIcon />}
+            </button>
+            {textMode && ocrResult?.text.trim() && <button type="button" className="xpe-button xpe-icon-button" onClick={copyAllText}
+              data-tooltip={copyStatus === "copied" ? t("textCopied") : t("copyAllText")}
+              aria-label={copyStatus === "copied" ? t("textCopied") : t("copyAllText")}>
+              <CopyIcon copied={copyStatus === "copied"} />
+            </button>}
           </div>
           {hasMultipleImages && (
             <div className="xpe-toolbar-group xpe-gallery-controls" aria-label={t("imagePosition")}>
@@ -756,11 +839,11 @@ export function ImageViewer({ images, initialIndex, onClose }: ImageViewerProps)
                 type="button"
                 className="xpe-button xpe-gallery-button"
                 onClick={() => showImageAt(currentIndex - 1)}
-                title={t("previousImage")}
+                data-tooltip={t("previousImage")}
                 aria-label={t("previousImage")}
                 disabled={currentIndex === 0}
               >
-                &lt;
+                <PreviousIcon />
               </button>
               <span className="xpe-image-position" aria-label={`${t("imagePosition")} ${currentIndex + 1} / ${images.length}`}>
                 {currentIndex + 1} / {images.length}
@@ -769,11 +852,11 @@ export function ImageViewer({ images, initialIndex, onClose }: ImageViewerProps)
                 type="button"
                 className="xpe-button xpe-gallery-button"
                 onClick={() => showImageAt(currentIndex + 1)}
-                title={t("nextImage")}
+                data-tooltip={t("nextImage")}
                 aria-label={t("nextImage")}
                 disabled={currentIndex === images.length - 1}
               >
-                &gt;
+                <NextIcon />
               </button>
             </div>
           )}
@@ -783,7 +866,7 @@ export function ImageViewer({ images, initialIndex, onClose }: ImageViewerProps)
             type="button"
             className="xpe-button xpe-icon-button"
             onClick={handleToolbarPositionClick}
-            title={toolbarPosition === "bottom" ? t("moveToolbarToTop") : t("moveToolbarToBottom")}
+            data-tooltip={toolbarPosition === "bottom" ? t("moveToolbarToTop") : t("moveToolbarToBottom")}
             aria-label={toolbarPosition === "bottom" ? t("moveToolbarToTop") : t("moveToolbarToBottom")}
           >
             <ToolbarPositionIcon position={toolbarPosition} />
@@ -793,7 +876,7 @@ export function ImageViewer({ images, initialIndex, onClose }: ImageViewerProps)
             href={currentImage.url}
             target="_blank"
             rel="noreferrer"
-            title={t("openOriginal")}
+            data-tooltip={t("openOriginal")}
             aria-label={t("openOriginal")}
           >
             <OpenIcon />
@@ -802,13 +885,13 @@ export function ImageViewer({ images, initialIndex, onClose }: ImageViewerProps)
             type="button"
             className="xpe-button xpe-icon-button xpe-close"
             onClick={onClose}
-            title={t("close")}
+            data-tooltip={t("close")}
             aria-label={t("close")}
           >
             <CloseIcon />
           </button>
         </div>
-      </div>
+      </Toolbar>
 
       {ratingPrompt?.shouldShow && (
         <div className="xpe-rating" role="status" onClick={(event) => event.stopPropagation()}>
@@ -855,7 +938,7 @@ export function ImageViewer({ images, initialIndex, onClose }: ImageViewerProps)
         </div>
       )}
 
-      {hasLoaded && navigatorSize.width > 0 && navigatorSize.height > 0 && (
+      {showNavigator && navigatorSize.width > 0 && navigatorSize.height > 0 && (
         <div
           className={`xpe-navigator xpe-navigator--${navigatorPosition}`}
           onClick={(event) => event.stopPropagation()}
@@ -897,9 +980,20 @@ export function ImageViewer({ images, initialIndex, onClose }: ImageViewerProps)
         </div>
       )}
 
+      {isRecognizing && <div className={`xpe-ocr-loading xpe-ocr-status--${toolbarPosition}`} role="status" aria-live="polite" aria-atomic="true">
+        <span className="xpe-ocr-spinner" aria-hidden="true" />
+        <span>{t("recognizingText")}</span>
+      </div>}
+      {textMode && !isRecognizing && <div className={`xpe-ocr-status xpe-ocr-status--${toolbarPosition}`} role="status" aria-live="polite">
+        {ocrStatus === "error" ? t("recognitionFailed") :
+          copyStatus === "error" ? t("copyTextFailed") : ocrResult ? (ocrResult.lines.length ? t("selectTextHint") : t("noTextFound")) : ""}
+        {ocrStatus === "error" && <button type="button" className="xpe-button" onClick={() => { setTextMode(false); }}>
+          {t("exitTextMode")}
+        </button>}
+      </div>}
       <div
         ref={viewportRef}
-        className={`xpe-canvas${isDragging ? " xpe-canvas--dragging" : ""}`}
+        className={`xpe-canvas${textMode ? " xpe-canvas--text" : ""}${isDragging ? " xpe-canvas--dragging" : ""}`}
         onClick={handleSurfaceClick}
         onPointerDown={handlePointerDown}
         onPointerMove={handlePointerMove}
@@ -914,19 +1008,25 @@ export function ImageViewer({ images, initialIndex, onClose }: ImageViewerProps)
           onClick={handleSurfaceClick}
         >
           {!hasLoaded && <div className="xpe-loading">{t("loadingImage")}</div>}
-          <img
-            ref={imageRef}
-            key={currentImage.url}
-            className={`xpe-image${hasLoaded ? " xpe-image--loaded" : ""}`}
-            src={displayedSrc}
-            alt={currentImage.alt}
-            draggable={false}
-            decoding="async"
-            fetchPriority="high"
-            style={imageStyle}
-            onLoad={handleImageLoad}
-            onClick={(event) => event.stopPropagation()}
-          />
+          <div className="xpe-image-frame" style={imageStyle} onClick={event => event.stopPropagation()}>
+            <img
+              ref={imageRef}
+              key={currentImage.url}
+              className={`xpe-image${hasLoaded ? " xpe-image--loaded" : ""}`}
+              src={displayedSrc}
+              alt={currentImage.alt}
+              draggable={false}
+              decoding="async"
+              fetchPriority="high"
+              style={{ width: "100%", height: "100%" }}
+              onLoad={handleImageLoad}
+              onClick={(event) => event.stopPropagation()}
+            />
+            {textMode && ocrResult && <div className="xpe-text-scale" style={{ width: ocrResult.width, height: ocrResult.height,
+              transform: `scale(${renderedSize.width / ocrResult.width}, ${renderedSize.height / ocrResult.height})` }}>
+              <TextLayer result={ocrResult} />
+            </div>}
+          </div>
         </div>
       </div>
     </div>

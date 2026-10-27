@@ -1,3 +1,5 @@
+import { readExtensionStorage, writeExtensionStorage } from "./extensionStorage";
+
 const STORAGE_KEY = "xpeRatingPrompt";
 const MIN_OPEN_COUNT_FOR_PROMPT = 5;
 const LATER_COOLDOWN_MS = 14 * 24 * 60 * 60 * 1000;
@@ -19,42 +21,17 @@ export type RatingPromptState = {
   storeUrl: string;
 };
 
-function getChromeApi(): typeof chrome | undefined {
-  return typeof chrome === "undefined" ? undefined : chrome;
-}
-
-function isStorageAvailable(): boolean {
-  const chromeApi = getChromeApi();
-  return Boolean(chromeApi?.storage?.local?.get && chromeApi.storage.local.set);
-}
-
 function isStoreReviewUrlConfigured(): boolean {
   return Boolean(STORE_REVIEW_URL);
 }
 
-function readStorage(): Promise<RatingPromptStorage> {
-  return new Promise((resolve) => {
-    if (!isStorageAvailable()) {
-      resolve({});
-      return;
-    }
-
-    getChromeApi()?.storage?.local?.get?.(STORAGE_KEY, (items: Record<string, unknown>) => {
-      const value = items[STORAGE_KEY];
-      resolve(value && typeof value === "object" ? (value as RatingPromptStorage) : {});
-    });
-  });
+async function readStorage(): Promise<RatingPromptStorage> {
+  const value = await readExtensionStorage(STORAGE_KEY);
+  return value && typeof value === "object" ? value as RatingPromptStorage : {};
 }
 
 function writeStorage(value: RatingPromptStorage): Promise<void> {
-  return new Promise((resolve) => {
-    if (!isStorageAvailable()) {
-      resolve();
-      return;
-    }
-
-    getChromeApi()?.storage?.local?.set?.({ [STORAGE_KEY]: value }, resolve);
-  });
+  return writeExtensionStorage(STORAGE_KEY, value);
 }
 
 export async function recordViewerOpenAndGetRatingPrompt(): Promise<RatingPromptState> {

@@ -11,6 +11,10 @@ interface ImportMeta {
 declare global {
   var chrome:
     | {
+        runtime?: {
+          lastError?: { message?: string };
+          sendMessage?: (message: unknown, callback: (response: any) => void) => void;
+        };
         i18n?: {
           getUILanguage?: () => string;
         };
