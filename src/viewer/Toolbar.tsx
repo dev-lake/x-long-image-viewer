@@ -1,8 +1,16 @@
-import { useEffect, useId, useRef, useState, type ReactNode } from "react";
+import { useEffect, useId, useRef, useState, type ReactNode, type RefObject } from "react";
+import type { ToolbarStyle } from "../toolbarPreference";
+import { LiquidGlass } from "./LiquidGlass";
 
 type Hint = { text: string; x: number; y: number; below: boolean };
 
-export function Toolbar({ position, children }: { position: "top" | "bottom"; children: ReactNode }) {
+export function Toolbar({ position, style, imageRef, imageSource, children }: {
+  position: "top" | "bottom";
+  style: ToolbarStyle;
+  imageRef: RefObject<HTMLImageElement | null>;
+  imageSource: string;
+  children: ReactNode;
+}) {
   const tooltipId = useId();
   const [hint, setHint] = useState<Hint | null>(null);
   const anchor = useRef<HTMLElement | null>(null);
@@ -57,13 +65,14 @@ export function Toolbar({ position, children }: { position: "top" | "bottom"; ch
   }, []);
 
   return <>
-    <div ref={root} className={`xpe-toolbar xpe-toolbar--${position}`}
+    <div ref={root} className={`xpe-toolbar xpe-toolbar--${position} xpe-toolbar--${style}`}
       onClick={event => { hide(); event.stopPropagation(); }}
       onPointerOver={event => { if (event.pointerType !== "touch") show(event.target); }}
       onPointerOut={event => {
         if (!(event.relatedTarget instanceof Node) || !anchor.current?.contains(event.relatedTarget)) hide();
       }}
       onFocus={event => show(event.target, true)} onBlur={hide} onPointerDown={hide}>
+      {style === "liquid-glass" && <LiquidGlass imageRef={imageRef} source={imageSource} />}
       {children}
     </div>
     {hint && <div className={`xpe-tooltip${hint.below ? " xpe-tooltip--below" : ""}`}

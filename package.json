@@ -1,13 +1,17 @@
 {
   "name": "x-long-image-viewer",
-  "version": "2.0.0",
+  "version": "2.1.0",
   "private": true,
   "type": "module",
   "scripts": {
     "dev": "node scripts/build-extension.mjs --watch",
     "build": "node scripts/build-extension.mjs",
     "package": "node scripts/package-store.mjs",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "site:build": "node scripts/build-landing.mjs",
+    "site:test": "npm run site:build && node --test scripts/test-landing.mjs",
+    "site:dev": "npm run site:build && wrangler dev --config landing/wrangler.jsonc",
+    "site:deploy": "npm run site:build && wrangler deploy --config landing/wrangler.jsonc"
   },
   "dependencies": {
     "@tesseract.js-data/chi_sim": "^1.0.0",

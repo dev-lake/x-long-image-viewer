@@ -2,6 +2,9 @@ import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } fr
 import { recognizeImage, type OcrResult } from "../ocr/client";
 import { TextLayer } from "../ocr/TextLayer";
 import { Toolbar } from "./Toolbar";
+import { ToolbarSettings } from "./ToolbarSettings";
+import { TextSelectionGuide } from "./TextSelectionGuide";
+import { hasSeenTextSelectionGuide, markTextSelectionGuideSeen } from "../textSelectionGuidePreference";
 import { preloadImage } from "../imageLoader";
 import { t } from "../i18n";
 import {
@@ -16,7 +19,10 @@ import {
   recordViewerOpenAndGetRatingPrompt,
   type RatingPromptState
 } from "../ratingPrompt";
-import { readToolbarPosition, writeToolbarPosition, type ToolbarPosition } from "../toolbarPreference";
+import {
+  readToolbarPosition, writeToolbarPosition, type ToolbarPosition,
+  readToolbarStyle, writeToolbarStyle, type ToolbarStyle
+} from "../toolbarPreference";
 
 type ImageViewerProps = {
   images: ViewerImage[];
@@ -44,6 +50,7 @@ const MIN_SCALE = 0.2;
 const MIN_FIT_SCALE = 0.01;
 const MAX_SCALE = 6;
 const SCALE_STEP = 1.2;
+const ZOOM_PRESETS = [0.5, 0.8, 1] as const;
 const NAVIGATOR_MAX_WIDTH = 180;
 const NAVIGATOR_MAX_HEIGHT = 120;
 const NAVIGATOR_OVERFLOW_THRESHOLD = 1.1;
@@ -102,18 +109,6 @@ function NextIcon() {
   );
 }
 
-function ToolbarPositionIcon({ position }: { position: ToolbarPosition }) {
-  const isAtTop = position === "top";
-
-  return (
-    <svg className="xpe-icon" viewBox="0 0 24 24" aria-hidden="true">
-      <rect x="4" y="4" width="16" height="16" rx="2" />
-      <path d={isAtTop ? "M4 9h16" : "M4 15h16"} />
-      <path d={isAtTop ? "m9 14 3 3 3-3M12 11v6" : "m9 10 3-3 3 3M12 7v6"} />
-    </svg>
-  );
-}
-
 function CopyIcon({ copied }: { copied: boolean }) {
   return (
     <svg className="xpe-icon" viewBox="0 0 24 24" aria-hidden="true">
@@ -163,6 +158,9 @@ export function ImageViewer({ images, initialIndex, onClose }: ImageViewerProps)
   const [ocrResult, setOcrResult] = useState<OcrResult | null>(null);
   const [ocrStatus, setOcrStatus] = useState<"idle" | "loading" | "ready" | "error">("idle");
   const [copyStatus, setCopyStatus] = useState<"idle" | "copied" | "error">("idle");
+  const [textGuideOpen, setTextGuideOpen] = useState(false);
+  const textGuideHandledRef = useRef(false);
+  const textSelectionButtonRef = useRef<HTMLButtonElement>(null);
   const viewportRef = useRef<HTMLDivElement | null>(null);
   const imageRef = useRef<HTMLImageElement | null>(null);
   const navigatorRef = useRef<HTMLDivElement | null>(null);
@@ -183,6 +181,7 @@ export function ImageViewer({ images, initialIndex, onClose }: ImageViewerProps)
   const [hasLoaded, setHasLoaded] = useState(false);
   const [ratingPrompt, setRatingPrompt] = useState<RatingPromptState | null>(null);
   const [toolbarPosition, setToolbarPosition] = useState<ToolbarPosition>("bottom");
+  const [toolbarStyle, setToolbarStyle] = useState<ToolbarStyle>("classic");
   const [navigatorPosition, setNavigatorPosition] = useState<NavigatorPosition>("left");
   const [currentIndex, setCurrentIndex] = useState(() => clamp(initialIndex, 0, Math.max(images.length - 1, 0)));
   const [imageSource, setImageSource] = useState(() => ({
@@ -219,6 +218,27 @@ export function ImageViewer({ images, initialIndex, onClose }: ImageViewerProps)
   }, [textMode, currentImage.url, ocrResult]);
 
   const isRecognizing = textMode && ocrStatus === "loading";
+  const textGuideVisible = textGuideOpen && hasLoaded;
+
+  const dismissTextGuide = useCallback(() => {
+    textGuideHandledRef.current = true;
+    setTextGuideOpen(false);
+    void markTextSelectionGuideSeen();
+  }, []);
+
+  const startTextSelection = () => {
+    dismissTextGuide();
+    setTextMode(true);
+    setCopyStatus("idle");
+  };
+
+  useEffect(() => {
+    let active = true;
+    void hasSeenTextSelectionGuide().then(seen => {
+      if (active && !seen && !textGuideHandledRef.current) setTextGuideOpen(true);
+    });
+    return () => { active = false; };
+  }, []);
 
   const copyAllText = async () => {
     if (!ocrResult?.text) return;
@@ -387,10 +407,12 @@ export function ImageViewer({ images, initialIndex, onClose }: ImageViewerProps)
     [zoomAt]
   );
 
-  const zoomToActualSize = useCallback(() => {
+  const cycleZoomPreset = useCallback(() => {
+    const currentPreset = ZOOM_PRESETS.findIndex(preset => Math.abs(scaleRef.current - preset) < 0.0001);
+    const nextScale = ZOOM_PRESETS[(currentPreset + 1) % ZOOM_PRESETS.length];
     const rect = viewportRef.current?.getBoundingClientRect();
     const origin = rect ? { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 } : undefined;
-    zoomAt(1, origin);
+    zoomAt(nextScale, origin);
   }, [zoomAt]);
 
   useEffect(() => {
@@ -530,6 +552,11 @@ export function ImageViewer({ images, initialIndex, onClose }: ImageViewerProps)
         setToolbarPosition(position);
       }
     });
+    void readToolbarStyle().then((style) => {
+      if (isMounted) {
+        setToolbarStyle(style);
+      }
+    });
 
     return () => {
       isMounted = false;
@@ -564,11 +591,17 @@ export function ImageViewer({ images, initialIndex, onClose }: ImageViewerProps)
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
         event.preventDefault();
+        if (textGuideVisible) {
+          event.stopImmediatePropagation();
+          textSelectionButtonRef.current?.focus({ preventScroll: true });
+          dismissTextGuide();
+          return;
+        }
         onClose();
         return;
       }
 
-      if (event.ctrlKey || event.metaKey) return;
+      if (event.ctrlKey || event.metaKey || (event.target instanceof Element && event.target.closest(".xpe-text-guide"))) return;
 
       if (event.key === "+" || event.key === "=") {
         event.preventDefault();
@@ -599,7 +632,7 @@ export function ImageViewer({ images, initialIndex, onClose }: ImageViewerProps)
 
     window.addEventListener("keydown", handleKeyDown, true);
     return () => window.removeEventListener("keydown", handleKeyDown, true);
-  }, [onClose, resetView, zoomBy]);
+  }, [onClose, resetView, zoomBy, textGuideVisible, dismissTextGuide]);
 
   const handleImageLoad = (event: React.SyntheticEvent<HTMLImageElement>) => {
     const image = event.currentTarget;
@@ -767,10 +800,9 @@ export function ImageViewer({ images, initialIndex, onClose }: ImageViewerProps)
     void declineRatingPrompt();
   };
 
-  const handleToolbarPositionClick = () => {
-    const nextPosition: ToolbarPosition = toolbarPosition === "bottom" ? "top" : "bottom";
-    setToolbarPosition(nextPosition);
-    void writeToolbarPosition(nextPosition);
+  const handleToolbarPositionChange = (position: ToolbarPosition) => {
+    setToolbarPosition(position);
+    void writeToolbarPosition(position);
   };
 
   const handleNavigatorPositionClick = () => {
@@ -796,14 +828,14 @@ export function ImageViewer({ images, initialIndex, onClose }: ImageViewerProps)
       aria-modal="true"
       aria-label={t("dialogLabel")}
     >
-      <Toolbar position={toolbarPosition}>
+      <Toolbar position={toolbarPosition} style={toolbarStyle} imageRef={imageRef} imageSource={displayedSrc}>
         <div className="xpe-toolbar-controls">
           <div className="xpe-toolbar-group xpe-zoom-controls">
             <button type="button" className="xpe-button xpe-icon-button" onClick={() => zoomBy(1 / SCALE_STEP)} data-tooltip={t("zoomOut")} aria-label={t("zoomOut")}>
               <svg className="xpe-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 12h12" /></svg>
             </button>
-            <button type="button" className="xpe-button xpe-scale" onClick={zoomToActualSize}
-              data-tooltip={t("actualSize")} aria-label={`${t("currentZoom")} ${formatScale(scale)}. ${t("actualSize")}`}>
+            <button type="button" className="xpe-button xpe-scale" onClick={cycleZoomPreset}
+              data-tooltip={t("cycleZoom")} aria-label={`${t("currentZoom")} ${formatScale(scale)}. ${t("cycleZoom")}`}>
               {formatScale(scale)}
             </button>
             <button type="button" className="xpe-button xpe-icon-button" onClick={() => zoomBy(SCALE_STEP)} data-tooltip={t("zoomIn")} aria-label={t("zoomIn")}>
@@ -820,11 +852,15 @@ export function ImageViewer({ images, initialIndex, onClose }: ImageViewerProps)
             </button>
           </div>
           <div className="xpe-toolbar-group">
-            <button type="button" className="xpe-button xpe-icon-button" disabled={!hasLoaded}
-              data-tooltip={textMode ? t("exitTextMode") : t("selectText")}
+            <button ref={textSelectionButtonRef} type="button" className="xpe-button xpe-icon-button" disabled={!hasLoaded}
+              data-tooltip={textGuideVisible ? undefined : textMode ? t("exitTextMode") : t("selectText")}
               aria-label={textMode ? t("exitTextMode") : t("selectText")}
               aria-busy={isRecognizing}
-              aria-pressed={textMode} onClick={() => { setTextMode(value => !value); setCopyStatus("idle"); }}>
+              aria-pressed={textMode} onClick={() => {
+                dismissTextGuide();
+                setTextMode(value => !value);
+                setCopyStatus("idle");
+              }}>
               {isRecognizing ? <span className="xpe-ocr-spinner xpe-ocr-spinner--button" aria-hidden="true" /> : <SelectTextIcon />}
             </button>
             {textMode && ocrResult?.text.trim() && <button type="button" className="xpe-button xpe-icon-button" onClick={copyAllText}
@@ -862,15 +898,15 @@ export function ImageViewer({ images, initialIndex, onClose }: ImageViewerProps)
           )}
         </div>
         <div className="xpe-toolbar-group">
-          <button
-            type="button"
-            className="xpe-button xpe-icon-button"
-            onClick={handleToolbarPositionClick}
-            data-tooltip={toolbarPosition === "bottom" ? t("moveToolbarToTop") : t("moveToolbarToBottom")}
-            aria-label={toolbarPosition === "bottom" ? t("moveToolbarToTop") : t("moveToolbarToBottom")}
-          >
-            <ToolbarPositionIcon position={toolbarPosition} />
-          </button>
+          <ToolbarSettings style={toolbarStyle} position={toolbarPosition}
+            onShowTextGuide={() => {
+              textGuideHandledRef.current = true;
+              setTextGuideOpen(true);
+            }}
+            onPositionChange={handleToolbarPositionChange} onStyleChange={style => {
+            setToolbarStyle(style);
+            void writeToolbarStyle(style);
+          }} />
           <a
             className="xpe-button xpe-icon-button xpe-link"
             href={currentImage.url}
@@ -893,7 +929,10 @@ export function ImageViewer({ images, initialIndex, onClose }: ImageViewerProps)
         </div>
       </Toolbar>
 
-      {ratingPrompt?.shouldShow && (
+      {textGuideVisible && <TextSelectionGuide anchorRef={textSelectionButtonRef} position={toolbarPosition}
+        textMode={textMode} onDismiss={dismissTextGuide} onStart={startTextSelection} />}
+
+      {ratingPrompt?.shouldShow && !textGuideVisible && (
         <div className="xpe-rating" role="status" onClick={(event) => event.stopPropagation()}>
           <div className="xpe-rating__copy">
             <strong>{t("rateTitle")}</strong>

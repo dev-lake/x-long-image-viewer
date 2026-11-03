@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f5f8fa">
+  <meta name="robots" content="noindex">
+  <title data-i18n="error.title">页面未找到 — X Long Image Viewer</title>
+  <link rel="stylesheet" href="/language.css">
+  <script src="/language.js" defer></script>
+  <link rel="icon" type="image/svg+xml" href="/assets/icon.svg">
+  <style>
+    :root { color-scheme: light; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif; color: #10202b; background: #f5f8fa; }
+    * { box-sizing: border-box; }
+    body { margin: 0; min-height: 100svh; display: grid; place-items: center; padding: 32px 24px; -webkit-font-smoothing: antialiased; }
+    main { width: min(100%, 520px); text-align: center; }
+    .brand { display: inline-flex; align-items: center; gap: 10px; color: #10202b; font-size: 14px; font-weight: 700; text-decoration: none; }
+    .brand img { width: 36px; height: 36px; }
+    .code { margin: 58px 0 12px; font-size: clamp(84px, 20vw, 132px); font-weight: 750; letter-spacing: -.08em; line-height: 1; color: #1689d8; }
+    h1 { margin: 20px 0 12px; font-size: clamp(25px, 6vw, 34px); letter-spacing: -.035em; line-height: 1.4; }
+    p { margin: 0; line-height: 1.8; color: #637680; font-size: 16px; }
+    .home { display: inline-flex; align-items: center; gap: 16px; margin-top: 30px; padding: 13px 24px; border-radius: 8px; background: #1689d8; color: #fff; font-size: 14px; font-weight: 650; text-decoration: none; transition: background .15s; }
+    .home:hover { background: #126da7; }
+    a:focus-visible { outline: 3px solid #1689d8; outline-offset: 5px; border-radius: 8px; }
+    .english { font-size: 12px; margin-top: 42px; }
+  </style>
+</head>
+<body>
+  <main>
+    <a class="brand" href="/" data-local-link="home" aria-label="X Long Image Viewer 首页" data-i18n-attr="aria-label:error.homeLabel"><img src="/assets/icon.svg" alt="" width="36" height="36"><span>X Long Image Viewer</span></a>
+    <div style="margin-top:24px"><label class="language-control"><span class="sr-only" data-i18n="language.label">语言</span><select class="language-select" aria-label="语言" data-i18n-attr="aria-label:language.label"><option value="zh-CN">简体中文</option><option value="en">English</option><option value="ja">日本語</option><option value="pt-BR">Português (BR)</option></select></label></div>
+    <div class="code" aria-hidden="true">404</div>
+    <h1 data-i18n="error.heading">这一页，暂时找不到了。</h1>
+    <p data-i18n="error.description">地址可能有误，或页面已经移动。<br>回到首页，继续了解更顺手的长图阅读体验。</p>
+    <a class="home" href="/" data-local-link="home" data-i18n="error.home">回到首页 <span aria-hidden="true">↗</span></a>
+  </main>
+</body>
+</html>

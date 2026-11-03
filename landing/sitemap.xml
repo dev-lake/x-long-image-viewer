@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:xhtml="http://www.w3.org/1999/xhtml">
+  <url>
+    <loc>https://x-image-viewer.devlake.app/zh-CN/</loc>
+    <xhtml:link rel="alternate" hreflang="zh-CN" href="https://x-image-viewer.devlake.app/zh-CN/"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://x-image-viewer.devlake.app/en/"/>
+    <xhtml:link rel="alternate" hreflang="ja" href="https://x-image-viewer.devlake.app/ja/"/>
+    <xhtml:link rel="alternate" hreflang="pt-BR" href="https://x-image-viewer.devlake.app/pt-BR/"/>
+  </url>
+  <url>
+    <loc>https://x-image-viewer.devlake.app/zh-CN/privacy/</loc>
+    <xhtml:link rel="alternate" hreflang="zh-CN" href="https://x-image-viewer.devlake.app/zh-CN/privacy/"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://x-image-viewer.devlake.app/en/privacy/"/>
+    <xhtml:link rel="alternate" hreflang="ja" href="https://x-image-viewer.devlake.app/ja/privacy/"/>
+    <xhtml:link rel="alternate" hreflang="pt-BR" href="https://x-image-viewer.devlake.app/pt-BR/privacy/"/>
+  </url>
+  <url>
+    <loc>https://x-image-viewer.devlake.app/en/</loc>
+    <xhtml:link rel="alternate" hreflang="zh-CN" href="https://x-image-viewer.devlake.app/zh-CN/"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://x-image-viewer.devlake.app/en/"/>
+    <xhtml:link rel="alternate" hreflang="ja" href="https://x-image-viewer.devlake.app/ja/"/>
+    <xhtml:link rel="alternate" hreflang="pt-BR" href="https://x-image-viewer.devlake.app/pt-BR/"/>
+  </url>
+  <url>
+    <loc>https://x-image-viewer.devlake.app/en/privacy/</loc>
+    <xhtml:link rel="alternate" hreflang="zh-CN" href="https://x-image-viewer.devlake.app/zh-CN/privacy/"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://x-image-viewer.devlake.app/en/privacy/"/>
+    <xhtml:link rel="alternate" hreflang="ja" href="https://x-image-viewer.devlake.app/ja/privacy/"/>
+    <xhtml:link rel="alternate" hreflang="pt-BR" href="https://x-image-viewer.devlake.app/pt-BR/privacy/"/>
+  </url>
+  <url>
+    <loc>https://x-image-viewer.devlake.app/ja/</loc>
+    <xhtml:link rel="alternate" hreflang="zh-CN" href="https://x-image-viewer.devlake.app/zh-CN/"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://x-image-viewer.devlake.app/en/"/>
+    <xhtml:link rel="alternate" hreflang="ja" href="https://x-image-viewer.devlake.app/ja/"/>
+    <xhtml:link rel="alternate" hreflang="pt-BR" href="https://x-image-viewer.devlake.app/pt-BR/"/>
+  </url>
+  <url>
+    <loc>https://x-image-viewer.devlake.app/ja/privacy/</loc>
+    <xhtml:link rel="alternate" hreflang="zh-CN" href="https://x-image-viewer.devlake.app/zh-CN/privacy/"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://x-image-viewer.devlake.app/en/privacy/"/>
+    <xhtml:link rel="alternate" hreflang="ja" href="https://x-image-viewer.devlake.app/ja/privacy/"/>
+    <xhtml:link rel="alternate" hreflang="pt-BR" href="https://x-image-viewer.devlake.app/pt-BR/privacy/"/>
+  </url>
+  <url>
+    <loc>https://x-image-viewer.devlake.app/pt-BR/</loc>
+    <xhtml:link rel="alternate" hreflang="zh-CN" href="https://x-image-viewer.devlake.app/zh-CN/"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://x-image-viewer.devlake.app/en/"/>
+    <xhtml:link rel="alternate" hreflang="ja" href="https://x-image-viewer.devlake.app/ja/"/>
+    <xhtml:link rel="alternate" hreflang="pt-BR" href="https://x-image-viewer.devlake.app/pt-BR/"/>
+  </url>
+  <url>
+    <loc>https://x-image-viewer.devlake.app/pt-BR/privacy/</loc>
+    <xhtml:link rel="alternate" hreflang="zh-CN" href="https://x-image-viewer.devlake.app/zh-CN/privacy/"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://x-image-viewer.devlake.app/en/privacy/"/>
+    <xhtml:link rel="alternate" hreflang="ja" href="https://x-image-viewer.devlake.app/ja/privacy/"/>
+    <xhtml:link rel="alternate" hreflang="pt-BR" href="https://x-image-viewer.devlake.app/pt-BR/privacy/"/>
+  </url>
+</urlset>

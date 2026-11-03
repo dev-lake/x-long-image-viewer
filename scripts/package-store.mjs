@@ -121,6 +121,7 @@ async function main() {
   requireFile("manifest.json");
   requireFile("assets/content.js");
   requireFile("assets/content.css");
+  requireFile("LIQUID-GL-NOTICE.txt");
   for (const path of ["background.js", "ocr/offscreen.html", "ocr/offscreen.js", "ocr/text-normalization.js", "ocr/tesseract.min.js", "ocr/worker.min.js", "ocr/worker.js", "ocr/lang/eng.traineddata.gz", "ocr/lang/chi_sim.traineddata.gz"]) requireFile(path);
   for (const variant of ["lstm", "simd-lstm", "relaxedsimd-lstm"]) {
     requireFile(`ocr/core/tesseract-core-${variant}.wasm.js`);

@@ -1,0 +1,25 @@
+{
+  "text": "A moment of calm.\nSelect text, then copy.",
+  "lines": [
+    {
+      "text": "A moment of calm.",
+      "bbox": {
+        "x0": 99,
+        "y0": 110,
+        "x1": 658,
+        "y1": 161
+      }
+    },
+    {
+      "text": "Select text, then copy.",
+      "bbox": {
+        "x0": 101,
+        "y0": 207,
+        "x1": 526,
+        "y1": 250
+      }
+    }
+  ],
+  "width": 1200,
+  "height": 1500
+}

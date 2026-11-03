@@ -1,0 +1,16 @@
+{
+  "$schema": "https://unpkg.com/wrangler@4.88.0/config-schema.json",
+  "name": "x-image-viewer",
+  "account_id": "731d121cee07dd7dba8be122ffeaebfd",
+  "compatibility_date": "2026-10-28",
+  "workers_dev": true,
+  "preview_urls": false,
+  "assets": {
+    "directory": ".",
+    "html_handling": "auto-trailing-slash",
+    "not_found_handling": "404-page"
+  },
+  "routes": [
+    { "pattern": "x-image-viewer.devlake.app", "custom_domain": true }
+  ]
+}

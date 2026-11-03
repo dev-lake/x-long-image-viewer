@@ -8,6 +8,16 @@ type TranslationKey =
   | "recognizingText"
   | "recognitionFailed"
   | "selectTextHint"
+  | "textGuideTitle"
+  | "textGuideIntro"
+  | "textGuideRecognize"
+  | "textGuideSelect"
+  | "textGuideCopyAll"
+  | "textGuideExit"
+  | "textGuideStart"
+  | "textGuideContinue"
+  | "textGuideDismiss"
+  | "textGuideHelp"
   | "noTextFound"
   | "copyTextFailed"
   | "close"
@@ -17,8 +27,14 @@ type TranslationKey =
   | "loadingImage"
   | "imagePosition"
   | "imageOverview"
-  | "moveToolbarToBottom"
-  | "moveToolbarToTop"
+  | "toolbarPosition"
+  | "toolbarPositionTop"
+  | "toolbarPositionBottom"
+  | "toolbarSettings"
+  | "toolbarStyle"
+  | "toolbarStyleClassic"
+  | "toolbarStyleLiquidGlass"
+  | "toolbarStyleHint"
   | "moveOverviewToLeft"
   | "moveOverviewToRight"
   | "nextImage"
@@ -30,7 +46,7 @@ type TranslationKey =
   | "rateTitle"
   | "remindLater"
   | "resetView"
-  | "actualSize"
+  | "cycleZoom"
   | "zoomIn"
   | "zoomOut";
 
@@ -45,6 +61,16 @@ const translations: Record<Locale, Record<TranslationKey, string>> = {
     recognizingText: "Recognizing text…",
     recognitionFailed: "Recognition failed. Exit and try again.",
     selectTextHint: "Drag to select text, then copy. Scroll to move through the image.",
+    textGuideTitle: "Select text in images",
+    textGuideIntro: "Recognize English and Simplified Chinese text, then select and copy it like text on a webpage.",
+    textGuideRecognize: "Click the highlighted Select text button and wait for recognition.",
+    textGuideSelect: "Drag to select text, then press Ctrl+C / ⌘C to copy.",
+    textGuideCopyAll: "Use Copy all to copy all the text in the image at once.",
+    textGuideExit: "Click the text selection button again to exit and resume dragging the image.",
+    textGuideStart: "Start selecting",
+    textGuideContinue: "Continue selecting",
+    textGuideDismiss: "Got it",
+    textGuideHelp: "Text selection guide",
     noTextFound: "No text found.",
     copyTextFailed: "Copy failed. Select text and press Ctrl+C / ⌘C.",
 
@@ -55,8 +81,14 @@ const translations: Record<Locale, Record<TranslationKey, string>> = {
     imagePosition: "Image position",
     imageOverview: "Image overview. Click or drag to move around the image.",
     loadingImage: "Loading image...",
-    moveToolbarToBottom: "Move toolbar to bottom",
-    moveToolbarToTop: "Move toolbar to top",
+    toolbarPosition: "Toolbar position",
+    toolbarPositionTop: "Top",
+    toolbarPositionBottom: "Bottom",
+    toolbarSettings: "Toolbar settings",
+    toolbarStyle: "Toolbar style",
+    toolbarStyleClassic: "Classic",
+    toolbarStyleLiquidGlass: "iOS Liquid Glass",
+    toolbarStyleHint: "Your choice is saved automatically for future sessions.",
     moveOverviewToLeft: "Move overview to lower left",
     moveOverviewToRight: "Move overview to lower right",
     nextImage: "Next image",
@@ -68,7 +100,7 @@ const translations: Record<Locale, Record<TranslationKey, string>> = {
     rateTitle: "Rate X Long Image Viewer",
     remindLater: "Later",
     resetView: "Reset view",
-    actualSize: "Actual size",
+    cycleZoom: "Cycle zoom: 50% → 80% → 100%",
     zoomIn: "Zoom in",
     zoomOut: "Zoom out"
   },
@@ -80,6 +112,16 @@ const translations: Record<Locale, Record<TranslationKey, string>> = {
     recognizingText: "文字を認識中…",
     recognitionFailed: "認識できませんでした。終了して再試行してください。",
     selectTextHint: "ドラッグで文字を選択してコピー。スクロールで画像を移動。",
+    textGuideTitle: "画像の文字を選択",
+    textGuideIntro: "画像の英語と簡体字中国語を認識し、ウェブページのように選択・コピーできます。",
+    textGuideRecognize: "強調表示された「文字を選択」を押し、認識が終わるまで待ちます。",
+    textGuideSelect: "文字をドラッグで選択し、Ctrl+C / ⌘C でコピーします。",
+    textGuideCopyAll: "「すべてコピー」で画像内の文字をまとめてコピーできます。",
+    textGuideExit: "文字選択ボタンをもう一度押すと、画像のドラッグ操作に戻ります。",
+    textGuideStart: "選択を開始",
+    textGuideContinue: "選択を続ける",
+    textGuideDismiss: "わかりました",
+    textGuideHelp: "文字選択ガイド",
     noTextFound: "文字が見つかりません。",
     copyTextFailed: "コピーできません。選択後 Ctrl+C / ⌘C を押してください。",
 
@@ -90,8 +132,14 @@ const translations: Record<Locale, Record<TranslationKey, string>> = {
     imagePosition: "画像の位置",
     imageOverview: "画像全体表示。クリックまたはドラッグで表示位置を移動します。",
     loadingImage: "画像を読み込み中...",
-    moveToolbarToBottom: "ツールバーを下に移動",
-    moveToolbarToTop: "ツールバーを上に移動",
+    toolbarPosition: "ツールバーの位置",
+    toolbarPositionTop: "上部",
+    toolbarPositionBottom: "下部",
+    toolbarSettings: "ツールバー設定",
+    toolbarStyle: "ツールバーのスタイル",
+    toolbarStyleClassic: "クラシック",
+    toolbarStyleLiquidGlass: "iOS Liquid Glass",
+    toolbarStyleHint: "選択は自動保存され、次回も適用されます。",
     moveOverviewToLeft: "全体表示を左下に移動",
     moveOverviewToRight: "全体表示を右下に移動",
     nextImage: "次の画像",
@@ -103,7 +151,7 @@ const translations: Record<Locale, Record<TranslationKey, string>> = {
     rateTitle: "X Long Image Viewer を評価",
     remindLater: "あとで",
     resetView: "表示をリセット",
-    actualSize: "実寸表示",
+    cycleZoom: "ズーム切替：50% → 80% → 100%",
     zoomIn: "拡大",
     zoomOut: "縮小"
   },
@@ -115,6 +163,16 @@ const translations: Record<Locale, Record<TranslationKey, string>> = {
     recognizingText: "Reconhecendo texto…",
     recognitionFailed: "Falha no reconhecimento. Saia e tente novamente.",
     selectTextHint: "Arraste para selecionar e copiar. Role para navegar na imagem.",
+    textGuideTitle: "Selecione texto nas imagens",
+    textGuideIntro: "Reconheça texto em inglês e chinês simplificado e selecione e copie como em uma página da web.",
+    textGuideRecognize: "Clique no botão Selecionar texto destacado e aguarde o reconhecimento.",
+    textGuideSelect: "Arraste para selecionar o texto e pressione Ctrl+C / ⌘C para copiar.",
+    textGuideCopyAll: "Use Copiar tudo para copiar todo o texto da imagem de uma vez.",
+    textGuideExit: "Clique novamente no botão de seleção para voltar a arrastar a imagem.",
+    textGuideStart: "Começar seleção",
+    textGuideContinue: "Continuar seleção",
+    textGuideDismiss: "Entendi",
+    textGuideHelp: "Guia de seleção de texto",
     noTextFound: "Nenhum texto encontrado.",
     copyTextFailed: "Falha ao copiar. Selecione o texto e pressione Ctrl+C / ⌘C.",
 
@@ -125,8 +183,14 @@ const translations: Record<Locale, Record<TranslationKey, string>> = {
     imagePosition: "Posição da imagem",
     imageOverview: "Visão geral da imagem. Clique ou arraste para navegar.",
     loadingImage: "Carregando imagem...",
-    moveToolbarToBottom: "Mover barra para baixo",
-    moveToolbarToTop: "Mover barra para cima",
+    toolbarPosition: "Posição da barra de ferramentas",
+    toolbarPositionTop: "Em cima",
+    toolbarPositionBottom: "Embaixo",
+    toolbarSettings: "Configurações da barra de ferramentas",
+    toolbarStyle: "Estilo da barra de ferramentas",
+    toolbarStyleClassic: "Clássico",
+    toolbarStyleLiquidGlass: "Liquid Glass do iOS",
+    toolbarStyleHint: "Sua escolha é salva automaticamente para as próximas sessões.",
     moveOverviewToLeft: "Mover visão geral para o canto inferior esquerdo",
     moveOverviewToRight: "Mover visão geral para o canto inferior direito",
     nextImage: "Próxima imagem",
@@ -138,7 +202,7 @@ const translations: Record<Locale, Record<TranslationKey, string>> = {
     rateTitle: "Avaliar o X Long Image Viewer",
     remindLater: "Depois",
     resetView: "Redefinir visualização",
-    actualSize: "Tamanho real",
+    cycleZoom: "Alternar zoom: 50% → 80% → 100%",
     zoomIn: "Aumentar zoom",
     zoomOut: "Diminuir zoom"
   },
@@ -150,6 +214,16 @@ const translations: Record<Locale, Record<TranslationKey, string>> = {
     recognizingText: "正在识别文字…",
     recognitionFailed: "识别失败，请退出选字后重试。",
     selectTextHint: "拖动选中文字后复制，滚动可浏览图片。",
+    textGuideTitle: "选中图片里的文字",
+    textGuideIntro: "识别图片中的简体中文和英文，再拖动选中复制。",
+    textGuideRecognize: "点击高亮的「选择文字」按钮，等待识别完成。",
+    textGuideSelect: "拖动选中文字，按 Ctrl+C / ⌘C 复制。",
+    textGuideCopyAll: "点击「复制全部」，可一次复制整张图片的文字。",
+    textGuideExit: "再次点击选字按钮即可退出，恢复拖动浏览。",
+    textGuideStart: "开始选字",
+    textGuideContinue: "继续选字",
+    textGuideDismiss: "知道了",
+    textGuideHelp: "文字选中指南",
     noTextFound: "未识别到文字。",
     copyTextFailed: "复制失败，请选中文字后按 Ctrl+C / ⌘C。",
 
@@ -160,8 +234,14 @@ const translations: Record<Locale, Record<TranslationKey, string>> = {
     imagePosition: "图片位置",
     imageOverview: "图片缩略导航。点击或拖动可快速定位。",
     loadingImage: "正在加载图片...",
-    moveToolbarToBottom: "将控制栏移至下方",
-    moveToolbarToTop: "将控制栏移至上方",
+    toolbarPosition: "工具栏位置",
+    toolbarPositionTop: "顶部",
+    toolbarPositionBottom: "底部",
+    toolbarSettings: "工具栏设置",
+    toolbarStyle: "工具栏样式",
+    toolbarStyleClassic: "经典",
+    toolbarStyleLiquidGlass: "iOS 液态玻璃",
+    toolbarStyleHint: "选择后自动保存，下次打开时继续使用。",
     moveOverviewToLeft: "将缩略图移至左下角",
     moveOverviewToRight: "将缩略图移至右下角",
     nextImage: "下一张图片",
@@ -173,7 +253,7 @@ const translations: Record<Locale, Record<TranslationKey, string>> = {
     rateTitle: "为 X Long Image Viewer 评分",
     remindLater: "稍后",
     resetView: "重置视图",
-    actualSize: "实际大小",
+    cycleZoom: "切换缩放：50% → 80% → 100%",
     zoomIn: "放大",
     zoomOut: "缩小"
   }
